@@ -3,24 +3,36 @@ package com.comparator.service.impl;
 import static com.comparator.utils.CompareUtils.compare;
 //import static com.comparator.utils.CompareUtils.isEmptyNode;
 import static com.comparator.utils.CompareUtils.writeAsJson;
+import static com.comparator.utils.CompareUtils.jsonBeautify;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
-import java.util.function.Consumer;
-import java.util.stream.Collectors;
+import java.util.Map;
+import java.util.Map.Entry;
 
 import org.apache.commons.collections4.IteratorUtils;
+import org.jooq.lambda.tuple.Tuple2;
 import org.json.simple.parser.ParseException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
+import com.comparator.model.CompareInput;
+import com.comparator.model.CompareOutput;
+import com.comparator.model.JsonDiff;
+import com.comparator.model.Key;
+import com.comparator.model.Keys;
+import com.comparator.model.NodeInfo;
+import com.comparator.model.NodeInfos;
 import com.comparator.service.IComparatorService;
 import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -28,72 +40,76 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 @Service
 public class ComparatorService implements IComparatorService {
 
-	private List<String>	skipNodes	= Arrays.asList("xmlTag", "limitWarningMessage", "conditionDescription");
 	@Autowired
 	@Qualifier("mapperIndent")
-	private ObjectMapper	mapperIndent;
+	private ObjectMapper mapperIndent;
 
 	@Override
-	public String compareJson(JsonNode actualJson, JsonNode expectedJson) throws IOException, ParseException {
+	public String compareJson(CompareInput compare) throws IOException, ParseException {
+
+		JsonNode actual = compare.getActual();
+		JsonNode expected = compare.getExpected();
 		String diff = "";
 
-		JsonNode actual = actualJson;// mapperIndent.readTree(actualJson);
-		JsonNode expected = expectedJson;//mapperIndent.readTree(expectedJson);
-		if (actual == null || expected == null) {
-			diff = "actual/expected input null";
-		} else {
-			diff = checkDiff(actual, expected, "root", false);
-			if (!diff.equals("")) {
-				diff = "{" + diff + "}";
-				JsonFactory factory = mapperIndent.getFactory();
-				JsonParser parser = factory.createParser(diff);
-				JsonNode compareResult = mapperIndent.readTree(parser);
-				diff = mapperIndent.writeValueAsString(compareResult);
-			}
-		}
-
+		diff = checkDiff(actual, expected, "", "root", false, new NodeInfos(compare.isPrimaryIncluded(), compare.getPrimaryNodes()), compare.getPrecision(), new Keys(compare.getKeys()), false, compare.isCaseSensitive())
+				.addJsonBorder().diff.toString();
+		diff = jsonBeautify(diff, mapperIndent);
+		//cmp.setDiff(diff);
+		//cmp.setEquals(diff.equals(""));
 		return diff;
-
 	}
 
-	private String checkDiff(JsonNode rootLevelActual, JsonNode rootLevelExpected, String rootName, boolean breakOnNull) throws IOException {
-		String nodeNotFound = "missing node";
-		String itemFound = "%s.Item[%s]: %s";
-		String itemNotFound = "missing item";
+	/**
+	 * 
+	 * @param rootLevelActual
+	 * @param rootLevelExpected
+	 * @param rootName
+	 * @param breakOnNull
+	 *            : when this flag is <b>false</b>: so <b>missing node, null, 0
+	 *            and ""</b> are expressed the same value
+	 * @param caseSensitive
+	 * @return
+	 * @throws IOException
+	 */
+	private JsonDiff checkDiff(JsonNode rootLevelActual, JsonNode rootLevelExpected, String parentRootName, String rootName, boolean breakOnNull, NodeInfos primaryNodes, int allowedDiffPrecision, Keys keys,
+			boolean isItemOfArray, boolean caseSensitive) throws IOException {
+		String nodeNotFound = "node does not exist";
+		String itemNotFound = "item does not exist";
 		String noUniqueItem = "No unique item found";
+		String objectIsEmpty = "object is empty";
+		String objectFields = "%s...";
+		String arrayIsEmpty = "Array is empty";
+		String arraySize = "Array size: %s";
 		String[] nodeCompare = new String[] { "actual", "expected" };
-		Consumer<StringBuilder> separate = (sb) -> {
-			if (sb.length() > 0) {
-				sb.append(",");
-			}
-		};
+
+		//before start the compare check if the node is included in the result
+		if (primaryNodes.isSkip(new NodeInfo(parentRootName, rootName), caseSensitive)) {
+			return JsonDiff.noDiff();
+		}
 
 		//LEVEL 1 : check root if exist
 		//------------------------------
 		boolean isActualNull = false;
 		boolean isExpectedNull = false;
 		if (rootLevelActual == null && rootLevelExpected == null/* 0 0 */) {
-			return "";//writeAsJson(rootName, nodeCompare, new String[] { nodeNotFound, nodeNotFound });//last child
+			return JsonDiff.noDiff();//last child
 		} else if (rootLevelActual == null && rootLevelExpected != null/* 0 1 */) {//check input if valid
-			if (breakOnNull)
-				return writeAsJson(rootName, nodeCompare, new String[] { nodeNotFound, rootLevelExpected.toString() });//last child
-
 			isActualNull = true;
-		} else if (rootLevelActual != null && rootLevelExpected == null/* 1 0 */) {
 			if (breakOnNull)
-				return writeAsJson(rootName, nodeCompare, new String[] { rootLevelActual.toString(), nodeNotFound });//last child
+				return JsonDiff.diff(writeAsJson(nodeCompare, new String[] { nodeNotFound, rootLevelExpected.toString() })).setNodeName(rootName);//last child
 
+		} else if (rootLevelActual != null && rootLevelExpected == null/* 1 0 */) {
 			isExpectedNull = true;
+			if (breakOnNull)
+				return JsonDiff.diff(writeAsJson(nodeCompare, new String[] { rootLevelActual.toString(), nodeNotFound })).setNodeName(rootName);//last child
+
 		} else if (rootLevelActual.isNull() && rootLevelExpected.isNull()) {//null null
-			return "";
+			return JsonDiff.noDiff();
 		} else if ((rootLevelActual.isNull() || rootLevelExpected.isNull())) {// not null null
 			if (breakOnNull)
-				return writeAsJson(rootName, nodeCompare, new String[] { rootLevelActual.toString(), rootLevelExpected.toString() });//last child
-
-			isActualNull = rootLevelActual.isNull();
-			isExpectedNull = rootLevelExpected.isNull();
-
+				return JsonDiff.diff(writeAsJson(nodeCompare, new String[] { rootLevelActual.toString(), rootLevelExpected.toString() })).setNodeName(rootName);//last child
 		}
+
 		//input exist, so compare the items: KEY/VALUE
 
 		//LEVEL 2 : load all the child's of root in one list
@@ -102,40 +118,58 @@ public class ComparatorService implements IComparatorService {
 		Iterator<String> aFieldsItr = isActualNull ? IteratorUtils.emptyIterator() : rootLevelActual.fieldNames();
 		Iterator<String> eFieldsItr = isExpectedNull ? IteratorUtils.emptyIterator() : rootLevelExpected.fieldNames();
 		HashSet<String> fieldsSet = new HashSet<String>();
+		Map<String, String> mappingExpected = new HashMap<>();
+		Map<String, String> mappingActual = new HashMap<>();
 
-		while (eFieldsItr.hasNext())
-			fieldsSet.add(eFieldsItr.next());
-		while (aFieldsItr.hasNext())
-			fieldsSet.add(aFieldsItr.next());
+		//check if one is empty
+		if (aFieldsItr.hasNext() && !eFieldsItr.hasNext()) {
+			return JsonDiff.diff(writeAsJson(nodeCompare, new String[] { String.format(objectFields, aFieldsItr.next()), objectIsEmpty })).setNodeName(rootName);
+		} else if (!aFieldsItr.hasNext() && eFieldsItr.hasNext()) {
+			return JsonDiff.diff(writeAsJson(nodeCompare, new String[] { objectIsEmpty, String.format(objectFields, eFieldsItr.next()) })).setNodeName(rootName);
+		}
+
+		while (eFieldsItr.hasNext()) {
+			String eNodeName = eFieldsItr.next();
+			fieldsSet.add(caseSensitive ? eNodeName : eNodeName.toLowerCase());
+			mappingExpected.put(eNodeName.toLowerCase(), eNodeName);
+		}
+
+		while (aFieldsItr.hasNext()) {
+			String aNodeName = aFieldsItr.next();
+			fieldsSet.add(caseSensitive ? aNodeName : aNodeName.toLowerCase());
+			mappingActual.put(aNodeName.toLowerCase(), aNodeName);
+		}
+
+		//completeMapping(mappingExpectedActual, mappingActualExpected);
+
 		// New iterator of unique objects
 		Iterator<String> allFieldsItr = fieldsSet.iterator();
 
 		if (allFieldsItr.hasNext()) {//Loop over the Node's
 			//LEVEL 3: loop over the child
-			StringBuilder output = new StringBuilder();
+			JsonDiff output = JsonDiff.init();
 			while (allFieldsItr.hasNext()) {
 				String parentName = allFieldsItr.next();
-				JsonNode parentActual = isActualNull ? null : rootLevelActual.get(parentName);
-				JsonNode parentExpect = isExpectedNull ? null : rootLevelExpected.get(parentName);
-				String tmpDiff = checkDiff(parentActual, parentExpect, parentName, breakOnNull);
+				JsonNode parentActual = isActualNull ? null : getJsonNode(parentName, rootLevelActual, caseSensitive, mappingActual);
+				JsonNode parentExpect = isExpectedNull ? null : getJsonNode(parentName, rootLevelExpected, caseSensitive, mappingExpected);
+				JsonDiff tmpDiff = checkDiff(parentActual, parentExpect, rootName, parentName, breakOnNull, primaryNodes, allowedDiffPrecision, keys, false, caseSensitive);
 
-				if (!tmpDiff.equals("")) {
-					separate.accept(output);
-					/*
-					 * if (output.length() > 0) { output.append(","); }
-					 * 
-					 */
-					output.append(tmpDiff);
+				if (tmpDiff.isNoDiff()) {
+					output.incrementEqual(tmpDiff);
+				} else {
+					output.appendDiff(tmpDiff);
 				}
 			}
-			if (output.length() > 0) {
-				output.insert(0, "\"" + rootName + "\":{").append("}");//parent level, and grand parent
+			if (!isItemOfArray) {
+				output.addJsonBorder().setNodeName(rootName);//parent level, and grand parent
 			}
-			return output.toString();
+
+			return output;
 		} else {//LEVEL 4: one child, Single Node
 
 			if (!isActualNull && rootLevelActual.isArray() || !isExpectedNull && rootLevelExpected.isArray()) {//loop as List
-				StringBuilder output = new StringBuilder();
+
+				JsonDiff output = JsonDiff.init();
 				List<JsonNode> actualAsList = new ArrayList<>();
 				List<JsonNode> expectedAsList = new ArrayList<>();
 				List<JsonNode> actualAsListCopy = new ArrayList<>();
@@ -152,64 +186,81 @@ public class ComparatorService implements IComparatorService {
 						expectedAsListCopy.add(e);
 					}
 
-				String[] keys = getListPK(rootName);
+				//check if one is an empty array, => return
 
-				for (JsonNode itemE : expectedAsList) {
-					List<JsonNode> sA = getItemById(actualAsList, keys, itemE);
+				if (actualAsList.size() == 0 && expectedAsList.size() != 0) {
+					return JsonDiff.diff(writeAsJson(nodeCompare, new String[] { arrayIsEmpty, String.format(arraySize, expectedAsList.size()) })).setNodeName(rootName);
+				} else if (actualAsList.size() != 0 && expectedAsList.size() == 0) {//if one is an empty array
+					return JsonDiff.diff(writeAsJson(nodeCompare, new String[] { String.format(arraySize, actualAsList.size()), arrayIsEmpty })).setNodeName(rootName);
+				}
 
-					if (sA.size() > 1l) {
-						if (keys == null) {//no unique key, all fiel are the key, and equal
+				for (int i = 0; i < expectedAsList.size(); i++) {
+					JsonNode itemE = expectedAsList.get(i);
+					List<JsonNode> sA = new ArrayList<>();
+					if (actualAsList.size() > 0) {
+						List<Tuple2<JsonNode, JsonDiff>> targetA = getCloserItemForwardAndReverse(actualAsList, itemE, primaryNodes, allowedDiffPrecision, expectedAsList, i, keys, parentRootName, rootName,
+								caseSensitive);
+						if (targetA.size() > 0) {
+							for (Tuple2<JsonNode, JsonDiff> tuple2 : targetA) {
+								sA.add(tuple2.v1);
+							}
+
+						}
+					}
+					if (sA.size() > 1 && keys.isDenyDuplication(parentRootName, rootName, caseSensitive)) {//no unique key,
+
+						String itemFoundKey = generateItemKeyStr(keys.findPKList(parentRootName, rootName, caseSensitive), itemE);
+						output.appendDiff(JsonDiff.diff(writeAsJson(nodeCompare, new String[] { noUniqueItem, itemFoundKey })));
+
+					} else {
+						if (sA.size() > 0) {
 							JsonNode itemA = sA.get(0);
+							JsonDiff tmpDiff = checkDiff(itemA, itemE, parentRootName, rootName, breakOnNull, primaryNodes, allowedDiffPrecision, keys, true, caseSensitive);
+							if (tmpDiff.isNoDiff()) {
+								output.incrementEqual(tmpDiff);
+							} else {
+								tmpDiff.addJsonBorder().setNodeName(
+										rootName + ".Item[" + (keys.findPKList(parentRootName, rootName, caseSensitive) != null ? generateItemKeyStr(keys.findPKList(parentRootName, rootName, caseSensitive), itemE)
+												: expectedAsListCopy.indexOf(itemE)) + "]");
+								tmpDiff.addJsonBorder();
+								output.appendDiff(tmpDiff);
+							}
 							actualAsList.remove(itemA);
-						} else {
-							String itemFoundKey = generateItemNotFoundStr(keys, itemE);
-							separate.accept(output);
-							output.append(writeAsJson(null, nodeCompare, new String[] { noUniqueItem, String.format(itemFound, rootName, expectedAsListCopy.indexOf(itemE), itemFoundKey) }));
-							continue;
+						} else {//size 0
+							String itemFoundKey = generateItemKeyStr(keys.findPKList(parentRootName, rootName, caseSensitive), itemE);
+							output.appendDiff(
+									JsonDiff.diff(writeAsJson(nodeCompare, new String[] { itemNotFound, itemFoundKey })).setNodeName(rootName + ".Item[" + expectedAsListCopy.indexOf(itemE) + "]").addJsonBorder());
 						}
-					} else
-
-					if (sA.size() == 1) {
-						JsonNode itemA = sA.get(0);
-						String tmpDiff = checkDiff(itemA, itemE, rootName + ".Item[" + expectedAsListCopy.indexOf(itemE) + "]", breakOnNull);
-						if (!tmpDiff.equals("")) {
-							/*
-							 * if (output.length() > 0) { output.append(","); }
-							 */
-							separate.accept(output);
-							output.append("{" + tmpDiff + "}");
-						}
-						actualAsList.remove(itemA);
-					} else {//size 0
-						String itemFoundKey = generateItemNotFoundStr(keys, itemE);
-						/*
-						 * if (output.length() > 0) { output.append(","); }
-						 */
-						separate.accept(output);
-						output.append(writeAsJson(null, nodeCompare, new String[] { itemNotFound, String.format(itemFound, rootName, expectedAsListCopy.indexOf(itemE), itemFoundKey) }));
 					}
 				}
+
 				if (actualAsList.size() != 0) {
 					for (JsonNode n : actualAsList) {
-						String itemFoundKey = generateItemNotFoundStr(keys, n);
-						/*
-						 * if (output.length() > 0) { output.append(","); }
-						 */
-						separate.accept(output);
-						output.append(writeAsJson(null, nodeCompare, new String[] { String.format(itemFound, rootName, actualAsListCopy.indexOf(n), itemFoundKey), itemNotFound }));
+						String itemFoundKey = generateItemKeyStr(keys.findPKList(parentRootName, rootName, caseSensitive), n);
+						output.appendDiff(JsonDiff.diff(writeAsJson(nodeCompare, new String[] { itemFoundKey, itemNotFound })).setNodeName(rootName + ".Item[" + actualAsListCopy.indexOf(n) + "]").addJsonBorder());
 					}
 				}
 
-				if (output.length() > 0) {
-					output.insert(0, "\"" + rootName + "\":[").append("]");//array level
-				}
-				return output.toString();
+				output.addArrayBorder().setNodeName(rootName);//array level
+				return output;
+
 			} else {//not an array
-				boolean equal = skipNodes.contains(rootName) ? true : compare(rootName, rootLevelActual, rootLevelExpected, breakOnNull);
+				//boolean nodeFound = primaryNodes.isContainsNodeInfo(new NodeInfo(parentRootName, rootName));
+				boolean equal = false;
+				//boolean skipNode = nodeFound && !primaryIncluded || primaryIncluded && !nodeFound;
+
+				/*
+				 * if (primaryNodes.isSkip(new NodeInfo(parentRootName,
+				 * rootName))) { equal = true; } else {
+				 */
+				equal = compare(rootName, rootLevelActual, rootLevelExpected, breakOnNull, allowedDiffPrecision);
+				/* } */
+
 				if (equal) {
-					return "";
+					return JsonDiff.noDiff();
 				} else {
-					return writeAsJson(rootName, nodeCompare, new String[] { isActualNull ? rootLevelActual + "" : rootLevelActual.toString(), isExpectedNull ? rootLevelExpected + "" : rootLevelExpected.toString() });//last child
+					return JsonDiff.diff(writeAsJson(nodeCompare, new String[] { isActualNull ? nodeNotFound : rootLevelActual.toString(), isExpectedNull ? nodeNotFound : rootLevelExpected.toString() }))
+							.setNodeName(rootName);//last child
 				}
 
 			}
@@ -217,22 +268,35 @@ public class ComparatorService implements IComparatorService {
 
 	}
 
-	private List<JsonNode> getItemById(List<JsonNode> list, String[] keys, JsonNode item) throws IOException {
+	private JsonNode getJsonNode(String nodeName, JsonNode jsonNode, boolean caseSensitive, Map<String, String> mappingName) {
+		/*
+		 * JsonNode j = jsonNode.get(nodeName); if (j == null && !caseSensitive
+		 * && mappingName.get(nodeName) != null) { j =
+		 * jsonNode.get(mappingName.get(nodeName)); } return j;
+		 */
+		return caseSensitive ? jsonNode.get(nodeName) : jsonNode.get(mappingName.get(nodeName));
+	}
+
+	/*
+	 * private void completeMapping(Map<String, String> mappingExpectedActual,
+	 * Map<String, String> mappingActualExpected) { for (Entry<String, String>
+	 * eToA : mappingExpectedActual.entrySet()) { for (Entry<String, String>
+	 * aToE : mappingActualExpected.entrySet()) { if
+	 * (eToA.getKey().equalsIgnoreCase(aToE.getKey())) {
+	 * eToA.setValue(aToE.getKey()); aToE.setValue(eToA.getKey()); break; } } }
+	 * }
+	 */
+
+	private List<JsonNode> getItemById(List<JsonNode> list, String[] keys, JsonNode item, int allowedDiffPrecision) throws IOException {
 		List<JsonNode> matches = new ArrayList<>();
 		for (JsonNode s : list) {
-			if (keys != null) {//filter on key
-				for (int whereI = 0; whereI < keys.length; whereI++) {
-					if (!compare("", item.get(keys[whereI]), s.get(keys[whereI]), false)) {
-						continue;
-					}
-				}
-				matches.add(s);
-			} else {//filter on equal all fields
-				String tmpDiff = checkDiff(item, s, "", false);
-				if (tmpDiff.equals("")) {
-					matches.add(s);
+			//filter on key
+			for (int whereI = 0; whereI < keys.length; whereI++) {
+				if (!compare("", item.get(keys[whereI]), s.get(keys[whereI]), false, allowedDiffPrecision)) {
+					continue;
 				}
 			}
+			matches.add(s);
 		}
 		/*
 		 * return list.stream().filter(s -> { if (keys != null) {//filter on key
@@ -244,11 +308,128 @@ public class ComparatorService implements IComparatorService {
 		return matches;
 	}
 
-	private String generateItemNotFoundStr(String keys[], JsonNode n) {
+	private JsonNode getCloserItem(List<JsonNode> list, JsonNode item, NodeInfos primaryNodes, boolean primaryIncluded, int allowedDiffPrecision, String parentName, String listName, Keys keys, boolean caseSensitive)
+			throws IOException {
+
+		JsonDiff tmpDiff = null;
+		JsonNode closerNode = null;
+
+		for (JsonNode s : list) {
+			if (closerNode == null) {//first item
+				tmpDiff = checkDiff(item, s, parentName, listName, false, primaryNodes, allowedDiffPrecision, keys, true, caseSensitive);
+				closerNode = s;
+			} else {
+				JsonDiff tmpDiff2 = checkDiff(item, s, parentName, listName, false, primaryNodes, allowedDiffPrecision, keys, true, caseSensitive);
+				if (tmpDiff2.diffCounter < tmpDiff.diffCounter) {
+					tmpDiff = tmpDiff2;
+					closerNode = s;
+				}
+			}
+			if (tmpDiff.isNoDiff()) {
+				break;
+			}
+		}
+
+		if (tmpDiff.equalCounter == 0) {
+			return null;
+		} else {
+			return closerNode;
+		}
+	}
+
+	private List<Tuple2<JsonNode, JsonDiff>> getCloserItemForwardAndReverse(List<JsonNode> actualAsList, JsonNode itemE, NodeInfos primaryNodes, int allowedDiffPrecision, List<JsonNode> expectedAsList, int fromIndex,
+			Keys keys, String parentName, String listName, boolean caseSensitive) throws IOException {
+		List<Tuple2<JsonNode, JsonDiff>> target = new ArrayList<>();
+		//Step 1. Forward: fetch iExpected in ListActual
+		List<Tuple2<JsonNode, JsonDiff>> forward = getItemCorrelation(actualAsList, itemE, primaryNodes, allowedDiffPrecision, 1, keys, parentName, listName, caseSensitive);
+		if (forward.size() > 0) {
+			for (int index = 0; index < forward.size(); index++) {
+				Tuple2<JsonNode, JsonDiff> tuple2 = forward.get(index);
+				JsonNode fJ2 = tuple2.v1;
+				JsonDiff fD2 = tuple2.v2;
+				boolean toBeUsed = true;
+				if (fD2.diffCounter == 0) {
+					return Arrays.asList(tuple2);
+				}
+				//Step 2. Reveres: fetch iActual in ListExpected
+				List<Tuple2<JsonNode, JsonDiff>> reverse = getItemCorrelation(expectedAsList.subList(fromIndex + 1, expectedAsList.size()), fJ2, primaryNodes, allowedDiffPrecision, 1, keys, parentName, listName,
+						caseSensitive);
+
+				for (Tuple2<JsonNode, JsonDiff> tuple22 : reverse) {
+					//JsonNode fJ22 = tuple22.v1;
+					JsonDiff fD22 = tuple22.v2;
+
+					if (fD22.diffCounter == 0) {
+						forward.remove(tuple2);
+						index--;
+					}
+
+					if (fD22.diffCounter == 0 || fD22.equalCounter > fD2.equalCounter) {
+						toBeUsed = false;
+						break;
+					}
+				}
+
+				if (toBeUsed) {
+					target.add(tuple2);
+				}
+			}
+			if (target.size() == 0 && forward.size() > 0) {
+				if (!keys.isKeyFound(parentName, listName, caseSensitive)) {
+					target.add(forward.get(forward.size() - 1));
+				}
+			}
+		}
+		Collections.sort(target, JsonDiff.EQUAL_DESC_DIFF_ASC);
+		return target;
+	}
+
+	private List<Tuple2<JsonNode, JsonDiff>> getItemCorrelation(List<JsonNode> list, JsonNode item, NodeInfos primaryNodes, int allowedDiffPrecision, int equalThreshold, Keys keys, String parentName, String listName,
+			boolean caseSensitive) throws IOException {
+		JsonDiff tmpDiff = null;
+		List<Tuple2<JsonNode, JsonDiff>> closerNode = new ArrayList<>();
+
+		for (JsonNode s : list) {
+			tmpDiff = checkDiff(item, s, parentName, listName, false, primaryNodes, allowedDiffPrecision, keys, true, caseSensitive);
+
+			if (tmpDiff.isNoDiff()) {
+				closerNode.clear();
+				closerNode.add(new Tuple2<JsonNode, JsonDiff>(s, tmpDiff));
+				break;
+			}
+
+			if (keys.isKeyFound(parentName, listName, caseSensitive)) {
+				boolean sameKeyFound = checkKeyFound(item, s, allowedDiffPrecision, keys.findPKList(parentName, listName, caseSensitive));
+				if (sameKeyFound) {
+					closerNode.add(new Tuple2<JsonNode, JsonDiff>(s, tmpDiff));
+				}
+			} else if (tmpDiff.equalCounter >= equalThreshold) {
+				closerNode.add(new Tuple2<JsonNode, JsonDiff>(s, tmpDiff));
+			}
+
+		}
+		Collections.sort(closerNode, JsonDiff.EQUAL_DESC_DIFF_ASC);
+		return closerNode;
+	}
+
+	private boolean checkKeyFound(JsonNode item, JsonNode s, int allowedDiffPrecision, Key key) {
+
+		boolean found = true;
+		//filter on key
+		for (String where : key.getKeySet()) {
+			if (!compare("", item.get(where), s.get(where), false, allowedDiffPrecision)) {
+				found = false;
+				break;
+			}
+		}
+		return found;
+	}
+
+	private String generateItemKeyStr(Key keySet, JsonNode n) {
 		String itemNotFound = "";
-		if (keys != null) {
-			for (String keyI : keys) {
-				itemNotFound += itemNotFound.length() > 0 ? " - " : "";
+		if (keySet != null) {
+			for (String keyI : keySet.getKeySet()) {
+				itemNotFound += itemNotFound.length() > 0 ? "-" : "";
 				itemNotFound += keyI;
 				itemNotFound += "[";
 				itemNotFound += n.get(keyI).toString();
@@ -259,38 +440,5 @@ public class ComparatorService implements IComparatorService {
 			itemNotFound = n.toString();
 		}
 		return itemNotFound;
-	}
-
-	private String[] getListPK(String rootName) {
-		String[] keys = null;
-		/*if (rootName.equals("listServiceItem")) {
-			keys = new String[] { "serviceCode", "rownbr" };
-		} else if (rootName.equals("listDiagnosis")) {
-			keys = new String[] { "orderId" };
-		} 
-			  else if (rootName.equals("listBenefitLink")) { keys = new
-			  String[] { "fobId", "benefitId", "other" }; }
-			 else if (rootName.equals("listBenefitServiceItem")) {
-			keys = new String[] { "serviceCode", "rowNbr" };
-		} else if (rootName.equals("listBenefitLinkType")) {
-			keys = new String[] { "id" };
-		} else if (rootName.equals("listBenefitConstraintTOB2")) {
-			keys = new String[] { "orderId" };
-		} else if (rootName.equals("listApplicableRule")) {
-			keys = new String[] { "ruleId" };
-		} else if (rootName.equals("approvalItems")) {
-			keys = new String[] { "approvalItemId" };
-		} 
-			  else if (rootName.equals("claimsEditAlerts")) { keys = new
-			  String[] { "moduleId", "serviceCode", "rowNbr", "errorRecord" };
-			 }
-			  else if (rootName.equals("listClaimValidation")) {
-			keys = new String[] { "id" };
-		} else if (rootName.equals("listBenefitConstraintTOB1")) {
-			keys = new String[] { "orderId" };//TODO CHECK WITH SISI
-		} else {
-			keys = null;
-		}*/
-		return keys;
 	}
 }

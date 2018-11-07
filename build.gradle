@@ -16,7 +16,7 @@ apply plugin: 'org.springframework.boot'
 apply plugin: 'io.spring.dependency-management'
 
 group = 'com.compare'
-version = '0.0.25'
+version = '0.1.13'
 
 description = """compare"""
 
