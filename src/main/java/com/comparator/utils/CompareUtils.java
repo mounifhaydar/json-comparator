@@ -22,7 +22,7 @@ public class CompareUtils {
 	private static final String[]									CLAIM_NUMBER_SLASH_ASOAP	= { "([A-Za-z0-9_]+)/([0-9]+),", "Y/X,", "([A-Za-z0-9_]+)/([0-9]+)\\)", "Y/X)" };	//EA0002965877/1
 	private static final String										UNABLE_TO_LOAD_CONDITIONS	= "Unable to Load Conditions";
 	private static final String[]									DERTY_CLEAN					= { "?", "'",
-			"\u2019"/* "’" */, "'", "&quot;", "'", "&apos;", "'", "null", "", " 0.0 ", " 0 ", ".0\"", "\"" ,"false","NO","true","YES"};
+			"\u2019"/* "’" */, "'", "&quot;", "'", "&apos;", "'", "null", "", " 0.0 ", " 0 ", ".0\"", "\"", "false", "NO", "true", "YES" };
 
 	//Dupication Terapy
 	private static final String[]									DUPLICATE_THERAPY			= { "may represent a duplication in therapy", "may represent duplicate therapy" };
@@ -50,7 +50,7 @@ public class CompareUtils {
 			double a = actual.asDouble();
 			double e = expected.asDouble();
 
-			if (Math.abs(a - e) != 0 && Math.abs(a - e) >= Math.pow(10, -allowedDiffPrecision)) {
+			if (Math.abs(a - e) != 0 && (allowedDiffPrecision == 0 || Math.abs(a - e) >= Math.pow(10, -allowedDiffPrecision))) {
 				equal = false;
 			} else {
 				equal = true;
