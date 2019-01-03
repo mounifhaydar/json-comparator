@@ -122,22 +122,25 @@ public class ComparatorService implements IComparatorService {
 		Map<String, String> mappingActual = new HashMap<>();
 
 		//check if one is empty
-		if (aFieldsItr.hasNext() && !eFieldsItr.hasNext()) {
-			return JsonDiff.diff(writeAsJson(nodeCompare, new String[] { String.format(objectFields, aFieldsItr.next()), objectIsEmpty })).setNodeName(rootName);
-		} else if (!aFieldsItr.hasNext() && eFieldsItr.hasNext()) {
-			return JsonDiff.diff(writeAsJson(nodeCompare, new String[] { objectIsEmpty, String.format(objectFields, eFieldsItr.next()) })).setNodeName(rootName);
-		}
 
-		while (eFieldsItr.hasNext()) {
-			String eNodeName = eFieldsItr.next();
-			fieldsSet.add(caseSensitive ? eNodeName : eNodeName.toLowerCase());
-			mappingExpected.put(eNodeName.toLowerCase(), eNodeName);
+		if (breakOnNull) {
+			if (aFieldsItr.hasNext() && !eFieldsItr.hasNext()) {
+				return JsonDiff.diff(writeAsJson(nodeCompare, new String[] { String.format(objectFields, aFieldsItr.next()), objectIsEmpty })).setNodeName(rootName);
+			} else if (!aFieldsItr.hasNext() && eFieldsItr.hasNext()) {
+				return JsonDiff.diff(writeAsJson(nodeCompare, new String[] { objectIsEmpty, String.format(objectFields, eFieldsItr.next()) })).setNodeName(rootName);
+			}
 		}
 
 		while (aFieldsItr.hasNext()) {
 			String aNodeName = aFieldsItr.next();
 			fieldsSet.add(caseSensitive ? aNodeName : aNodeName.toLowerCase());
 			mappingActual.put(aNodeName.toLowerCase(), aNodeName);
+		}
+
+		while (eFieldsItr.hasNext()) {
+			String eNodeName = eFieldsItr.next();
+			fieldsSet.add(caseSensitive ? eNodeName : eNodeName.toLowerCase());
+			mappingExpected.put(eNodeName.toLowerCase(), eNodeName);
 		}
 
 		//completeMapping(mappingExpectedActual, mappingActualExpected);
@@ -157,6 +160,13 @@ public class ComparatorService implements IComparatorService {
 				if (tmpDiff.isNoDiff()) {
 					output.incrementEqual(tmpDiff);
 				} else {
+					//Diff found
+					//if object is empty, so no need to loop over the Node's
+					if (mappingActual.size() > 0 && mappingExpected.size() == 0) {
+						return JsonDiff.diff(writeAsJson(nodeCompare, new String[] { String.format(objectFields, parentName), objectIsEmpty })).setNodeName(rootName);
+					} else if (mappingActual.size() == 0 && mappingExpected.size() > 0) {
+						return JsonDiff.diff(writeAsJson(nodeCompare, new String[] { objectIsEmpty, String.format(objectFields, parentName) })).setNodeName(rootName);
+					}
 					output.appendDiff(tmpDiff);
 				}
 			}
@@ -166,7 +176,7 @@ public class ComparatorService implements IComparatorService {
 
 			return output;
 		} else {//LEVEL 4: one child, Single Node
-
+			//TODO:IF null, and all array filed are null => return JsonDiff.diff(writeAsJson(nodeCompare, new String[] { String.format(objectFields, aFieldsItr.next()), objectIsEmpty })).setNodeName(rootName);
 			if (!isActualNull && rootLevelActual.isArray() || !isExpectedNull && rootLevelExpected.isArray()) {//loop as List
 
 				JsonDiff output = JsonDiff.init();
@@ -207,6 +217,7 @@ public class ComparatorService implements IComparatorService {
 
 						}
 					}
+
 					if (sA.size() > 1 && keys.isDenyDuplication(parentRootName, rootName, caseSensitive)) {//no unique key,
 
 						String itemFoundKey = generateItemKeyStr(keys.findPKList(parentRootName, rootName, caseSensitive), itemE);
