@@ -20,5 +20,6 @@ public class CompareInput {
 	private boolean			primaryIncluded;
 	private List<Key>		keys;
 	private int				precision;
-	boolean					caseSensitive;
+	boolean					nodeSensitiveName;
+	boolean					caseSensitiveValue;
 }

@@ -3,11 +3,8 @@ package com.comparator.utils;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
-import java.text.DecimalFormat;
 import java.util.Arrays;
 import java.util.function.BiFunction;
-
-import org.springframework.util.StringUtils;
 
 import com.fasterxml.jackson.core.JsonEncoding;
 import com.fasterxml.jackson.core.JsonFactory;
@@ -19,27 +16,22 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 
 public class CompareUtils {
-	private static final String[]									CLAIM_NUMBER_SLASH_ASOAP	= { "([A-Za-z0-9_]+)/([0-9]+),", "Y/X,", "([A-Za-z0-9_]+)/([0-9]+)\\)", "Y/X)" };	//EA0002965877/1
-	private static final String										UNABLE_TO_LOAD_CONDITIONS	= "Unable to Load Conditions";
-	private static final String[]									DERTY_CLEAN					= { "?", "'",
-			"\u2019"/* "’" */, "'", "&quot;", "'", "&apos;", "'", "null", "", " 0.0 ", " 0 ", ".0\"", "\"", "false", "NO", "true", "YES" };
+	private static final String										CLAIM_ETERNAL_REF	= "(EA\\d+/\\d+)" + "|" + "(C\\d+/\\d+)" + "|" + "(ECLAIM\\d+/\\d+)";
+	private static final String[]									ALERTS				= { "Unable to Load Conditions", "Contraindication between Drug", "may represent duplicate therapy",
+			"has to managed or treated before the drug" };
+	private static final String[]									DERTY_CLEAN			= { "?", "'",
+			"\u2019"/* "’" */, "'", "&quot;", "'", "&apos;", "'", "null", "", " 0.0 ", " 0 ", ".0\"", "\"", "false", "NO", "true", "YES", "may represent a duplication in therapy", "may represent duplicate therapy" };
 
-	//Dupication Terapy
-	private static final String[]									DUPLICATE_THERAPY			= { "may represent a duplication in therapy", "may represent duplicate therapy" };
-	//private static final String										START_OF_CLAIM_AND_DRUG		= "of Claim #";
-	//private static final String										START_OF_CLAIM_AND_DRUGS	= "of Current Claim and Drug(s) (";
-	//private static final String										END_OF_CLAIM_AND_DRUG		= ") are members of the same class description and may represent duplicate therapy";
-
-	public static BiFunction<Integer, Integer, Integer>				nvlInteger					= (x, def) -> x == null ? def : x;
-	public static BiFunction<Long, Long, Long>						nvlLong						= (x, def) -> x == null ? def : x;
-	public static BiFunction<Double, Double, Double>				nvlDouble					= (x, def) -> x == null ? def : x;
-	public static BiFunction<Boolean, Boolean, Boolean>				nvlBoolean					= (x, def) -> x == null ? def : x;
-	public static BiFunction<BigDecimal, BigDecimal, BigDecimal>	nvlBigDecimal				= (x, def) -> x == null ? def : x;
-	public static BiFunction<String, String, String>				nvlVarchar					= (x, def) -> x == null ? def : x;
+	public static BiFunction<Integer, Integer, Integer>				nvlInteger			= (x, def) -> x == null ? def : x;
+	public static BiFunction<Long, Long, Long>						nvlLong				= (x, def) -> x == null ? def : x;
+	public static BiFunction<Double, Double, Double>				nvlDouble			= (x, def) -> x == null ? def : x;
+	public static BiFunction<Boolean, Boolean, Boolean>				nvlBoolean			= (x, def) -> x == null ? def : x;
+	public static BiFunction<BigDecimal, BigDecimal, BigDecimal>	nvlBigDecimal		= (x, def) -> x == null ? def : x;
+	public static BiFunction<String, String, String>				nvlVarchar			= (x, def) -> x == null ? def : x;
 	//public static Function<String, String> escape = (x) -> x.replace("\"", "\\\"");
 	//private static double											allowedDiffPrecision		= 0.01;
 
-	public static boolean compare(String rootName, JsonNode actual, JsonNode expected, boolean breakOnNull, int allowedDiffPrecision) {
+	public static boolean compare(String rootName, JsonNode actual, JsonNode expected, boolean breakOnNull, int allowedDiffPrecision, boolean caseSensitive) {
 		boolean equal = false;
 		actual = actual == null ? JsonNodeFactory.instance.nullNode() : actual;
 		expected = expected == null ? JsonNodeFactory.instance.nullNode() : expected;
@@ -64,33 +56,19 @@ public class CompareUtils {
 				equal = true;
 			}
 		} else if (actual.isTextual() && expected.isTextual()) {
-			String[] a = cleanNode(actual);
-			String[] e = cleanNode(expected);
-			/*
-			 * if (rootName.equals("alertMessage")) { a = a.replace("&quot;",
-			 * "'").replace("&apos;", "'"); e = e.replace("&quot;",
-			 * "'").replace("&apos;", "'"); a = a.substring(0,
-			 * a.indexOf("Unable to Load Conditions") > -1 ?
-			 * a.indexOf("Unable to Load Conditions") : 0); //"T78.40XA" !=
-			 * "W57.XXXA" => skip comparison, both not found e = e.substring(0,
-			 * e.indexOf("Unable to Load Conditions") > -1 ?
-			 * e.indexOf("Unable to Load Conditions") : 0); //"T78.40XA" !=
-			 * "W57.XXXA" => skip comparison, both not found } else if
-			 * (rootName.equals("moreDetails")) { a = a.replace("&quot;",
-			 * "'").replace("&apos;", "'"); e = e.replace("&quot;",
-			 * "'").replace("&apos;", "'"); }
-			 */
+			String[] a = cleanNode(actual, caseSensitive);
+			String[] e = cleanNode(expected, caseSensitive);
 			equal = Arrays.equals(a, e);
 
 		} else {//default equal
-			String[] a = cleanNode(actual);
-			String[] e = cleanNode(expected);
+			String[] a = cleanNode(actual, caseSensitive);
+			String[] e = cleanNode(expected, caseSensitive);
 			equal = Arrays.equals(a, e);
 		}
 		return equal;
 	}
 
-	public static String[] cleanNode(JsonNode n) {
+	public static String[] cleanNode(JsonNode n, boolean caseSensitive) {
 		String in = n.asText().trim();
 		String[] out = null;
 
@@ -100,24 +78,14 @@ public class CompareUtils {
 
 		if (in.equals("0") || in.equals("0.0")) {//@Now Zero is same as empty string
 			in = "";
-		} else if (in.indexOf(UNABLE_TO_LOAD_CONDITIONS) > -1) {
-			in = UNABLE_TO_LOAD_CONDITIONS;//ret.substring(0,  ret.indexOf("Unable to Load Conditions"));//moreDetails, alertMessage, "T78.40XA" != "W57.XXXA" => skip comparison, both not found
-		} else if (in.indexOf(DUPLICATE_THERAPY[0]) > -1 || in.indexOf(DUPLICATE_THERAPY[1]) > -1) {
-			/*
-			 * for (int i = 0; i < CLAIM_NUMBER_SLASH_ASOAP.length - 1; i += 2)
-			 * {//ECLAIM0002965877 and EA0002965877 are the same in =
-			 * in.replaceAll(CLAIM_NUMBER_SLASH_ASOAP[i],
-			 * CLAIM_NUMBER_SLASH_ASOAP[i + 1]); }
-			 * 
-			 * if (in.indexOf(START_OF_CLAIM_AND_DRUGS) > -1) {//[drug 1, drug
-			 * 2] and [drug 2, drug 1] are the same in =
-			 * in.substring(in.indexOf(START_OF_CLAIM_AND_DRUG) +
-			 * START_OF_CLAIM_AND_DRUG.length(),
-			 * in.lastIndexOf(END_OF_CLAIM_AND_DRUG)); }
-			 */
-			in = DUPLICATE_THERAPY[0];
 		}
-		out = in.split(",");
+		in = in.replaceAll(CLAIM_ETERNAL_REF, "CLAIM_ETERNAL_REF");
+		String in2 = in;
+		String in3 = in;
+		if (Arrays.asList(ALERTS).stream().filter(p -> in2.contains(p)).count() > 0l) {
+			in3 = Arrays.asList(ALERTS).stream().filter(p -> in2.contains(p)).findFirst().get();//ret.substring(0,  ret.indexOf("Unable to Load Conditions"));//moreDetails, alertMessage, "T78.40XA" != "W57.XXXA" => skip comparison, both not found
+		}
+		out = (caseSensitive ? in3 : in3.toLowerCase()).split(",");
 		Arrays.sort(out);
 		return out;
 	}
