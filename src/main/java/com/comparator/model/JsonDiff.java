@@ -14,10 +14,11 @@ import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 
-@RequiredArgsConstructor
+
 @NoArgsConstructor
 @Getter
 @Setter
+@RequiredArgsConstructor
 public class JsonDiff implements Comparable<JsonDiff> {
 
 	@NonNull
