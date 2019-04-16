@@ -40,15 +40,15 @@ public class ComparatorService implements IComparatorService {
 	private ObjectMapper mapperIndent;
 
 	@Override
-	public String compareJson(CompareInput compare) throws IOException, ParseException {
+	public JsonDiff compareJson(CompareInput compare) throws IOException, ParseException {
 
 		JsonNode actual = compare.getActual();
 		JsonNode expected = compare.getExpected();
-		String diff = "";
+		JsonDiff diff ;
 
 		diff = checkDiff(actual, expected, "", "root", false, new NodeInfos(compare.isPrimaryIncluded(), compare.getPrimaryNodes()), compare.getPrecision(), new Keys(compare.getKeys()), false,
-				compare.isNodeSensitiveName(), compare.isCaseSensitiveValue()).addJsonBorder().diff.toString();
-		diff = jsonBeautify(diff, mapperIndent);
+				compare.isNodeSensitiveName(), compare.isCaseSensitiveValue()).addJsonBorder();
+		
 		//cmp.setDiff(diff);
 		//cmp.setEquals(diff.equals(""));
 		return diff;
