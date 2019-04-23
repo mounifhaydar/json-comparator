@@ -19,16 +19,16 @@ public class NodeInfos {
 		if (nodeInfos == null)
 			return false;
 		for (NodeInfo a : nodeInfos) {
-			if(caseSensitive) {
-				if (a.getNodeName().equals(nodeInfo.getNodeName()) && a.getParentNodeName().equals(nodeInfo.getParentNodeName())) {
+			if (caseSensitive) {
+				if (a.getPath().equals(nodeInfo.getPath())) {
 					return true;
 				}
-			}else {
-				if (a.getNodeName().equalsIgnoreCase(nodeInfo.getNodeName()) && a.getParentNodeName().equalsIgnoreCase(nodeInfo.getParentNodeName())) {
+			} else {
+				if (a.getPath().equalsIgnoreCase(nodeInfo.getPath())) {
 					return true;
 				}
 			}
-			
+
 		}
 		return false;
 	}

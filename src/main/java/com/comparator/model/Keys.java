@@ -14,32 +14,31 @@ import lombok.Setter;
 public class Keys {
 	private List<Key> keys;
 
-	public Key findPKList(String parentName, String listName, boolean caseSensitive) {
+	public Key findPKList(String parentName, String listName, String path, boolean caseSensitive) {
 		if (keys == null) {
 			return null;
 		}
 		for (Key key : keys) {
 			if (caseSensitive) {
-				if (parentName.equals(key.getParentNodeName()) && listName.equals(key.getNodeName())) {
+				if (path.equals(key.getPath())) {
 					return key;
 				}
 			} else {
-				if (parentName.equalsIgnoreCase(key.getParentNodeName()) && listName.equalsIgnoreCase(key.getNodeName())) {
+				if (path.equalsIgnoreCase(key.getPath())) {
 					return key;
 				}
 			}
-
 		}
 		return null;
 	}
 
-	public boolean isDenyDuplication(String parentName, String listName, boolean caseSensitive) {
-		Key r = findPKList(parentName, listName, caseSensitive);
+	public boolean isDenyDuplication(String parentName, String listName, String path, boolean caseSensitive) {
+		Key r = findPKList(parentName, listName, path, caseSensitive);
 		return r != null && r.isUnique();
 	}
 
-	public boolean isKeyFound(String parentName, String listName, boolean caseSensitive) {
-		Key r = findPKList(parentName, listName, caseSensitive);
+	public boolean isHasKey(String parentName, String listName, String path, boolean caseSensitive) {
+		Key r = findPKList(parentName, listName, path, caseSensitive);
 		return r != null;
 	}
 }
