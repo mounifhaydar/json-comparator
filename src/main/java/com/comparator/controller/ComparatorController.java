@@ -1,29 +1,22 @@
 package com.comparator.controller;
 
-import static com.comparator.utils.CompareUtils.jsonBeautify;
-
 import java.io.IOException;
 
 import org.json.simple.parser.ParseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.comparator.model.CompareInput;
-import com.comparator.model.CompareOutput;
-import static com.comparator.utils.CompareUtils.jsonBeautify;
 import com.comparator.model.JsonDiff;
 import com.comparator.service.IComparatorService;
 import com.fasterxml.jackson.core.JsonParseException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 @RestController
 @RequestMapping("/comparator")
@@ -31,22 +24,17 @@ public class ComparatorController {
 	private final Logger		logger	= LoggerFactory.getLogger(ComparatorController.class);
 
 	@Autowired
-	@Qualifier("mapperIndent")
-	private ObjectMapper mapperIndent;
-	
-	@Autowired
 	private IComparatorService	comparatorService;
 
 	@RequestMapping(value = "/compare", method = RequestMethod.POST)
 	public ResponseEntity<String> runCompare(@RequestBody CompareInput compare) {
-		JsonDiff jsonDiff ;
-		String diff="";
+		JsonDiff jsonDiff;
+		String diff = "";
 		//CompareOutput cmp = new CompareOutput();
 		try {
 			logger.info("start compare");
 			jsonDiff = comparatorService.compareJson(compare);
 			diff = jsonDiff.diff.toString();
-			diff = jsonBeautify(diff, mapperIndent);
 			logger.info("finish compare");
 		} catch (JsonParseException e) {
 			e.printStackTrace();
@@ -64,10 +52,10 @@ public class ComparatorController {
 
 	@RequestMapping(value = "/compare/details", method = RequestMethod.POST)
 	public ResponseEntity<JsonDiff> runCompareDetails(@RequestBody CompareInput compare) {
-		JsonDiff jsonDiff ;
+		JsonDiff jsonDiff;
 		try {
 			logger.info("start compare");
-			jsonDiff = comparatorService.compareJson(compare);	
+			jsonDiff = comparatorService.compareJson(compare);
 			logger.info("finish compare");
 		} catch (JsonParseException e) {
 			e.printStackTrace();

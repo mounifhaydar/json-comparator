@@ -48,9 +48,7 @@ public class ComparatorService implements IComparatorService {
 
 		diff = checkDiff(actual, expected, "", "root", "root", false, new NodeInfos(compare.isPrimaryIncluded(), compare.getPrimaryNodes()), compare.getPrecision(), new Keys(compare.getKeys()), false,
 				compare.isNodeSensitiveName(), compare.isCaseSensitiveValue()).addJsonBorder();
-
-		//cmp.setDiff(diff);
-		//cmp.setEquals(diff.equals(""));
+		diff.setDiff(new StringBuilder(jsonBeautify(diff.diff.toString(), mapperIndent)));
 		return diff;
 	}
 
@@ -439,13 +437,19 @@ public class ComparatorService implements IComparatorService {
 	private String generateItemKeyStr(Key keySet, JsonNode n) {
 		String itemNotFound = "";
 		if (keySet != null) {
-			for (String keyI : keySet.getKeySet()) {
-				itemNotFound += itemNotFound.length() > 0 ? "-" : "";
-				itemNotFound += keyI;
-				itemNotFound += "[";
-				itemNotFound += n.get(keyI).toString();
-				itemNotFound += "]";
 
+			for (String keyI : keySet.getKeySet()) {
+				try {
+					itemNotFound += itemNotFound.length() > 0 ? "-" : "";
+					itemNotFound += keyI;
+					itemNotFound += "[";
+					itemNotFound += n.get(keyI).toString();
+					itemNotFound += "]";
+
+				} catch (Exception e) {
+					itemNotFound = keyI + "_missing";
+					e.printStackTrace();
+				}
 			}
 		} else {
 			itemNotFound = n.toString();
