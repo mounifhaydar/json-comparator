@@ -19,8 +19,8 @@ public class CompareUtils {
 	private static final String										CLAIM_ETERNAL_REF	= "(EA\\d+/\\d+)" + "|" + "(C\\d+/\\d+)" + "|" + "(ECLAIM\\d+/\\d+)";
 	private static final String[]									ALERTS				= { "Unable to Load Conditions", "Contraindication between Drug", "may represent duplicate therapy",
 			"has to managed or treated before the drug" };
-	private static final String[]									DERTY_CLEAN			= { "?", "'",
-			"\u2019", "'", "&quot;", "'", "&apos;", "'", "null", "", " 0.0 ", " 0 ", ".0\"", "\"", "false", "NO", "true", "YES", "may represent a duplication in therapy", "may represent duplicate therapy" };
+	private static final String[]									DERTY_CLEAN			= { "?", "'", "\u2019", "'", "&quot;", "'", "&apos;", "'", "null", "", " 0.0 ", " 0 ", ".0\"", "\"", "false", "NO", "true", "YES",
+			"may represent a duplication in therapy", "may represent duplicate therapy" };
 
 	public static BiFunction<Integer, Integer, Integer>				nvlInteger			= (x, def) -> x == null ? def : x;
 	public static BiFunction<Long, Long, Long>						nvlLong				= (x, def) -> x == null ? def : x;

@@ -14,7 +14,6 @@ import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 
-
 @NoArgsConstructor
 @Getter
 @Setter
@@ -79,7 +78,7 @@ public class JsonDiff implements Comparable<JsonDiff> {
 	 * 
 	 * @param rootName
 	 * @return
-	 * @throws IOException 
+	 * @throws IOException
 	 */
 	public JsonDiff setNodeName(String rootName) throws IOException {
 		if (diff.length() > 0) {

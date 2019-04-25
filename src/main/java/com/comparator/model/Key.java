@@ -11,7 +11,7 @@ import lombok.Setter;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-public class Key extends NodeInfo{
+public class Key extends NodeInfo {
 	private boolean			unique;
 	private List<String>	keySet;
 }
