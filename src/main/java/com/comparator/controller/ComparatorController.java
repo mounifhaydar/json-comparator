@@ -2,6 +2,9 @@ package com.comparator.controller;
 
 import java.io.IOException;
 
+import javax.ws.rs.Consumes;
+import javax.ws.rs.core.MediaType;
+
 import org.json.simple.parser.ParseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,7 +29,7 @@ public class ComparatorController {
 	@Autowired
 	private IComparatorService	comparatorService;
 
-	@RequestMapping(value = "/compare", method = RequestMethod.POST)
+	@RequestMapping(value = "/compare", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON, produces = MediaType.APPLICATION_JSON)
 	public ResponseEntity<String> runCompare(@RequestBody CompareInput compare) {
 		JsonDiff jsonDiff;
 		String diff = "";
@@ -50,7 +53,7 @@ public class ComparatorController {
 		return new ResponseEntity<String>(diff, HttpStatus.OK);
 	}
 
-	@RequestMapping(value = "/compare/details", method = RequestMethod.POST)
+	@RequestMapping(value = "/compare/details", method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON, produces = MediaType.APPLICATION_JSON)
 	public ResponseEntity<JsonDiff> runCompareDetails(@RequestBody CompareInput compare) {
 		JsonDiff jsonDiff;
 		try {
