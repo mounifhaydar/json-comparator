@@ -31,7 +31,21 @@ import com.comparator.model.NodeInfos;
 import com.comparator.service.IComparatorService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.JsonNodeCreator;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 
+/**
+ * @author Mounif.Haydar
+ *
+ */
+/**
+ * @author Mounif.Haydar
+ *
+ */
+/**
+ * @author Mounif.Haydar
+ *
+ */
 @Service
 public class ComparatorService implements IComparatorService {
 
@@ -56,11 +70,18 @@ public class ComparatorService implements IComparatorService {
 	 * 
 	 * @param rootLevelActual
 	 * @param rootLevelExpected
+	 * @param parentRootName
 	 * @param rootName
+	 * @param path
 	 * @param breakOnNull
 	 *            : when this flag is <b>false</b>: so <b>missing node, null, 0
 	 *            and ""</b> are expressed the same value
+	 * @param primaryNodes
+	 * @param allowedDiffPrecision
+	 * @param keys
+	 * @param isItemOfArray
 	 * @param nodeSensitiveName
+	 * @param caseSensitiveValue
 	 * @return
 	 * @throws IOException
 	 */
@@ -74,7 +95,6 @@ public class ComparatorService implements IComparatorService {
 		String arrayIsEmpty = "Array is empty";
 		String arraySize = "Array size: %s";
 		String[] nodeCompare = new String[] { "actual", "expected" };
-		System.out.println("next node:" + rootName);
 
 		//before start the compare check if the node is included in the result
 		if (primaryNodes.isSkip(new NodeInfo(parentRootName, rootName, path), nodeSensitiveName)) {
@@ -174,6 +194,8 @@ public class ComparatorService implements IComparatorService {
 			//TODO:IF null, and all array filed are null => return JsonDiff.diff(writeAsJson(nodeCompare, new String[] { String.format(objectFields, aFieldsItr.next()), objectIsEmpty })).setNodeName(rootName);
 			if (!isActualNull && rootLevelActual.isArray() || !isExpectedNull && rootLevelExpected.isArray()) {//loop as List
 
+				long startTime = System.currentTimeMillis();
+				System.out.println("Array path:" + path);
 				JsonDiff output = JsonDiff.init();
 				List<JsonNode> actualAsList = new ArrayList<>();
 				List<JsonNode> expectedAsList = new ArrayList<>();
@@ -194,9 +216,27 @@ public class ComparatorService implements IComparatorService {
 				//check if one is an empty array, => return
 
 				if (actualAsList.size() == 0 && expectedAsList.size() != 0) {
-					return JsonDiff.diff(writeAsJson(nodeCompare, new String[] { arrayIsEmpty, String.format(arraySize, expectedAsList.size()) })).setNodeName(rootName);
+					for (int i = 0; i < expectedAsList.size(); i++) {
+						JsonNode itemE = expectedAsList.get(i);
+						JsonNode itemA = JsonNodeFactory.instance.nullNode();
+						JsonDiff tmpDiff = checkDiff(itemA, itemE, parentRootName, rootName, path, breakOnNull, primaryNodes, allowedDiffPrecision, keys, true, nodeSensitiveName, caseSensitiveValue);
+						if (!tmpDiff.isNoDiff()) {
+							return JsonDiff.diff(writeAsJson(nodeCompare, new String[] { arrayIsEmpty, String.format(arraySize, expectedAsList.size()) })).setNodeName(rootName);
+						}
+					}
+					return JsonDiff.noDiff();
+
 				} else if (actualAsList.size() != 0 && expectedAsList.size() == 0) {//if one is an empty array
-					return JsonDiff.diff(writeAsJson(nodeCompare, new String[] { String.format(arraySize, actualAsList.size()), arrayIsEmpty })).setNodeName(rootName);
+					for (int i = 0; i < actualAsList.size(); i++) {
+						JsonNode itemE = JsonNodeFactory.instance.nullNode();
+						JsonNode itemA = actualAsList.get(i);
+						JsonDiff tmpDiff = checkDiff(itemA, itemE, parentRootName, rootName, path, breakOnNull, primaryNodes, allowedDiffPrecision, keys, true, nodeSensitiveName, caseSensitiveValue);
+						if (!tmpDiff.isNoDiff()) {
+							return JsonDiff.diff(writeAsJson(nodeCompare, new String[] { String.format(arraySize, actualAsList.size()), arrayIsEmpty })).setNodeName(rootName);
+						}
+					}
+					JsonDiff.noDiff();
+
 				}
 
 				for (int i = 0; i < expectedAsList.size(); i++) {
@@ -251,6 +291,8 @@ public class ComparatorService implements IComparatorService {
 				}
 
 				output.addArrayBorder().setNodeName(rootName);//array level
+
+				System.out.println("execution time(seconds) of " + path + ":" + ((System.currentTimeMillis() - startTime) / 1000));
 				return output;
 
 			} else {//not an array

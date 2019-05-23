@@ -6,6 +6,8 @@ import java.util.function.Consumer;
 
 import org.jooq.lambda.tuple.Tuple2;
 import static com.comparator.utils.CompareUtils.writeJsonField;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.JsonNode;
 
 import lombok.Getter;
@@ -141,6 +143,7 @@ public class JsonDiff implements Comparable<JsonDiff> {
 	/**
 	 * if length > 0 add "<b>,</b>" at the end of string
 	 */
+	@JsonIgnore
 	private Consumer<StringBuilder> stringAppender = (sb) -> {
 		if (sb.length() > 0) {
 			sb.append(",");
