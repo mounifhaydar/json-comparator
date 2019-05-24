@@ -195,7 +195,7 @@ public class ComparatorService implements IComparatorService {
 			if (!isActualNull && rootLevelActual.isArray() || !isExpectedNull && rootLevelExpected.isArray()) {//loop as List
 
 				long startTime = System.currentTimeMillis();
-				System.out.println("Array path:" + path);
+				//System.out.println("Array path:" + path);
 				JsonDiff output = JsonDiff.init();
 				List<JsonNode> actualAsList = new ArrayList<>();
 				List<JsonNode> expectedAsList = new ArrayList<>();
@@ -292,7 +292,7 @@ public class ComparatorService implements IComparatorService {
 
 				output.addArrayBorder().setNodeName(rootName);//array level
 
-				System.out.println("execution time(seconds) of " + path + ":" + ((System.currentTimeMillis() - startTime) / 1000));
+				System.out.println("execution time of \n" + path + ": \n" + ((System.currentTimeMillis() - startTime) / 1000)+" (seconds)");
 				return output;
 
 			} else {//not an array
