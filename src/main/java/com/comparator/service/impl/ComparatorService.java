@@ -16,6 +16,8 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.collections4.IteratorUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.jooq.lambda.tuple.Tuple2;
 import org.json.simple.parser.ParseException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,7 +33,6 @@ import com.comparator.model.NodeInfos;
 import com.comparator.service.IComparatorService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.JsonNodeCreator;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 
 /**
@@ -49,6 +50,9 @@ import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 @Service
 public class ComparatorService implements IComparatorService {
 
+
+	private static final Logger	LOGGER	= LogManager.getLogger(ComparatorService.class);
+	
 	@Autowired
 	@Qualifier("mapperIndent")
 	private ObjectMapper mapperIndent;
@@ -59,10 +63,13 @@ public class ComparatorService implements IComparatorService {
 		JsonNode actual = compare.getActual();
 		JsonNode expected = compare.getExpected();
 		JsonDiff diff;
-
+		long startTime = System.currentTimeMillis();
 		diff = checkDiff(actual, expected, "", "root", "root", false, new NodeInfos(compare.isPrimaryIncluded(), compare.getPrimaryNodes()), compare.getPrecision(), new Keys(compare.getKeys()), false,
 				compare.isNodeSensitiveName(), compare.isCaseSensitiveValue()).addJsonBorder();
 		diff.setDiff(new StringBuilder(jsonBeautify(diff.diff.toString(), mapperIndent)));
+		
+		LOGGER.info("execution time:" + ((System.currentTimeMillis() - startTime) / 1000)+" (seconds)");
+		
 		return diff;
 	}
 
@@ -194,7 +201,7 @@ public class ComparatorService implements IComparatorService {
 			//TODO:IF null, and all array filed are null => return JsonDiff.diff(writeAsJson(nodeCompare, new String[] { String.format(objectFields, aFieldsItr.next()), objectIsEmpty })).setNodeName(rootName);
 			if (!isActualNull && rootLevelActual.isArray() || !isExpectedNull && rootLevelExpected.isArray()) {//loop as List
 
-				long startTime = System.currentTimeMillis();
+				//long startTime = System.currentTimeMillis();
 				//System.out.println("Array path:" + path);
 				JsonDiff output = JsonDiff.init();
 				List<JsonNode> actualAsList = new ArrayList<>();
@@ -236,7 +243,6 @@ public class ComparatorService implements IComparatorService {
 						}
 					}
 					JsonDiff.noDiff();
-
 				}
 
 				for (int i = 0; i < expectedAsList.size(); i++) {
@@ -292,7 +298,7 @@ public class ComparatorService implements IComparatorService {
 
 				output.addArrayBorder().setNodeName(rootName);//array level
 
-				System.out.println("execution time of \n" + path + ": \n" + ((System.currentTimeMillis() - startTime) / 1000)+" (seconds)");
+				//System.out.println("execution time of \n" + path + ": \n" + ((System.currentTimeMillis() - startTime) / 1000)+" (seconds)");
 				return output;
 
 			} else {//not an array
