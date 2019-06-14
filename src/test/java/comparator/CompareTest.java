@@ -62,27 +62,6 @@ public class CompareTest {
 	}
 
 	//@Test
-	public void testEncoding() throws UnsupportedEncodingException {
-		String s = "\u0027";
-		String s2 = "’";
-		String s3 = "\u2019";
-
-		System.out.println(s);
-		System.out.println(s.equals(s2));
-
-		System.out.println(s2);
-		byte[] xxx = s2.getBytes("UTF-8");
-
-		for (byte x : xxx) {
-			System.out.println(Integer.toHexString(x));
-		}
-
-		System.out.println(s3);
-		System.out.println(s3.equals(s2));
-
-	}
-
-	//@Test
 	public void testAllowedDiff() throws UnsupportedEncodingException {
 		System.out.println(Math.pow(10, -0.01));
 	}
