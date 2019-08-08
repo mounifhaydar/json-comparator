@@ -1,6 +1,6 @@
 package com.comparator.service.impl;
 
-import static com.comparator.utils.CompareUtils.compare;
+import static com.comparator.utils.CompareUtils.isEqual;
 import static com.comparator.utils.CompareUtils.jsonBeautify;
 //import static com.comparator.utils.CompareUtils.isEmptyNode;
 import static com.comparator.utils.CompareUtils.writeAsJson;
@@ -50,12 +50,11 @@ import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 @Service
 public class ComparatorService implements IComparatorService {
 
-
 	private static final Logger	LOGGER	= LogManager.getLogger(ComparatorService.class);
-	
+
 	@Autowired
 	@Qualifier("mapperIndent")
-	private ObjectMapper mapperIndent;
+	private ObjectMapper		mapperIndent;
 
 	@Override
 	public JsonDiff compareJson(CompareInput compare) throws IOException, ParseException {
@@ -64,12 +63,12 @@ public class ComparatorService implements IComparatorService {
 		JsonNode expected = compare.getExpected();
 		JsonDiff diff;
 		long startTime = System.currentTimeMillis();
-		diff = checkDiff(actual, expected, "", "root", "root", false, new NodeInfos(compare.isPrimaryIncluded(), compare.getPrimaryNodes()), compare.getPrecision(), new Keys(compare.getKeys()), false,
+		diff = checkDiff(actual, expected, "", "root", "root", false, true, new NodeInfos(compare.isPrimaryIncluded(), compare.getPrimaryNodes()), compare.getPrecision(), new Keys(compare.getKeys()), false,
 				compare.isNodeSensitiveName(), compare.isCaseSensitiveValue()).addJsonBorder();
 		diff.setDiff(new StringBuilder(jsonBeautify(diff.diff.toString(), mapperIndent)));
-		
-		LOGGER.info("execution time:" + ((System.currentTimeMillis() - startTime) / 1000)+" (seconds)");
-		
+
+		LOGGER.info("execution time:" + ((System.currentTimeMillis() - startTime) / 1000) + " (seconds)");
+
 		return diff;
 	}
 
@@ -92,8 +91,8 @@ public class ComparatorService implements IComparatorService {
 	 * @return
 	 * @throws IOException
 	 */
-	private JsonDiff checkDiff(JsonNode rootLevelActual, JsonNode rootLevelExpected, String parentRootName, String rootName, String path, boolean breakOnNull, NodeInfos primaryNodes, int allowedDiffPrecision, Keys keys,
-			boolean isItemOfArray, boolean nodeSensitiveName, boolean caseSensitiveValue) throws IOException {
+	private JsonDiff checkDiff(JsonNode rootLevelActual, JsonNode rootLevelExpected, String parentRootName, String rootName, String path, boolean breakOnNullNode, boolean breakOnNullValue, NodeInfos primaryNodes,
+			int allowedDiffPrecision, Keys keys, boolean isItemOfArray, boolean nodeSensitiveName, boolean caseSensitiveValue) throws IOException {
 		String nodeNotFound = "node does not exist";
 		String itemNotFound = "item does not exist";
 		String noUniqueItem = "No unique item found";
@@ -116,18 +115,18 @@ public class ComparatorService implements IComparatorService {
 			return JsonDiff.noDiff();//last child
 		} else if (rootLevelActual == null && rootLevelExpected != null/* 0 1 */) {//check input if valid
 			isActualNull = true;
-			if (breakOnNull)
+			if (breakOnNullNode)
 				return JsonDiff.diff(writeAsJson(nodeCompare, new String[] { nodeNotFound, rootLevelExpected.toString() })).setNodeName(rootName);//last child
 
 		} else if (rootLevelActual != null && rootLevelExpected == null/* 1 0 */) {
 			isExpectedNull = true;
-			if (breakOnNull)
+			if (breakOnNullNode)
 				return JsonDiff.diff(writeAsJson(nodeCompare, new String[] { rootLevelActual.toString(), nodeNotFound })).setNodeName(rootName);//last child
 
 		} else if (rootLevelActual.isNull() && rootLevelExpected.isNull()) {//null null
 			return JsonDiff.noDiff();
 		} else if ((rootLevelActual.isNull() || rootLevelExpected.isNull())) {// not null null
-			if (breakOnNull)
+			if (breakOnNullNode)
 				return JsonDiff.diff(writeAsJson(nodeCompare, new String[] { rootLevelActual.toString(), rootLevelExpected.toString() })).setNodeName(rootName);//last child
 		}
 
@@ -144,7 +143,7 @@ public class ComparatorService implements IComparatorService {
 
 		//check if one is empty
 
-		if (breakOnNull) {
+		if (breakOnNullNode) {
 			if (aFieldsItr.hasNext() && !eFieldsItr.hasNext()) {
 				return JsonDiff.diff(writeAsJson(nodeCompare, new String[] { String.format(objectFields, aFieldsItr.next()), objectIsEmpty })).setNodeName(rootName);
 			} else if (!aFieldsItr.hasNext() && eFieldsItr.hasNext()) {
@@ -177,7 +176,8 @@ public class ComparatorService implements IComparatorService {
 				String nodePath = path + "." + parentName;
 				JsonNode parentActual = isActualNull ? null : getJsonNode(parentName, rootLevelActual, nodeSensitiveName, mappingActual);
 				JsonNode parentExpect = isExpectedNull ? null : getJsonNode(parentName, rootLevelExpected, nodeSensitiveName, mappingExpected);
-				JsonDiff tmpDiff = checkDiff(parentActual, parentExpect, rootName, parentName, nodePath, breakOnNull, primaryNodes, allowedDiffPrecision, keys, false, nodeSensitiveName, caseSensitiveValue);
+				JsonDiff tmpDiff = checkDiff(parentActual, parentExpect, rootName, parentName, nodePath, breakOnNullNode, breakOnNullValue, primaryNodes, allowedDiffPrecision, keys, false, nodeSensitiveName,
+						caseSensitiveValue);
 
 				if (tmpDiff.isNoDiff()) {
 					output.incrementEqual(tmpDiff);
@@ -226,7 +226,8 @@ public class ComparatorService implements IComparatorService {
 					for (int i = 0; i < expectedAsList.size(); i++) {
 						JsonNode itemE = expectedAsList.get(i);
 						JsonNode itemA = JsonNodeFactory.instance.nullNode();
-						JsonDiff tmpDiff = checkDiff(itemA, itemE, parentRootName, rootName, path, breakOnNull, primaryNodes, allowedDiffPrecision, keys, true, nodeSensitiveName, caseSensitiveValue);
+						JsonDiff tmpDiff = checkDiff(itemA, itemE, parentRootName, rootName, path, breakOnNullNode, breakOnNullValue, primaryNodes, allowedDiffPrecision, keys, true, nodeSensitiveName,
+								caseSensitiveValue);
 						if (!tmpDiff.isNoDiff()) {
 							return JsonDiff.diff(writeAsJson(nodeCompare, new String[] { arrayIsEmpty, String.format(arraySize, expectedAsList.size()) })).setNodeName(rootName);
 						}
@@ -237,7 +238,8 @@ public class ComparatorService implements IComparatorService {
 					for (int i = 0; i < actualAsList.size(); i++) {
 						JsonNode itemE = JsonNodeFactory.instance.nullNode();
 						JsonNode itemA = actualAsList.get(i);
-						JsonDiff tmpDiff = checkDiff(itemA, itemE, parentRootName, rootName, path, breakOnNull, primaryNodes, allowedDiffPrecision, keys, true, nodeSensitiveName, caseSensitiveValue);
+						JsonDiff tmpDiff = checkDiff(itemA, itemE, parentRootName, rootName, path, breakOnNullNode, breakOnNullValue, primaryNodes, allowedDiffPrecision, keys, true, nodeSensitiveName,
+								caseSensitiveValue);
 						if (!tmpDiff.isNoDiff()) {
 							return JsonDiff.diff(writeAsJson(nodeCompare, new String[] { String.format(arraySize, actualAsList.size()), arrayIsEmpty })).setNodeName(rootName);
 						}
@@ -250,7 +252,7 @@ public class ComparatorService implements IComparatorService {
 					List<JsonNode> sA = new ArrayList<>();
 					if (actualAsList.size() > 0) {
 						List<Tuple2<JsonNode, JsonDiff>> targetA = getCloserItemForwardAndReverse(actualAsList, itemE, primaryNodes, allowedDiffPrecision, expectedAsList, i, keys, parentRootName, rootName, path,
-								nodeSensitiveName, caseSensitiveValue);
+								nodeSensitiveName, caseSensitiveValue, breakOnNullNode, breakOnNullValue);
 						if (targetA.size() > 0) {
 							for (Tuple2<JsonNode, JsonDiff> tuple2 : targetA) {
 								sA.add(tuple2.v1);
@@ -267,7 +269,8 @@ public class ComparatorService implements IComparatorService {
 					} else {
 						if (sA.size() > 0) {
 							JsonNode itemA = sA.get(0);
-							JsonDiff tmpDiff = checkDiff(itemA, itemE, parentRootName, rootName, path, breakOnNull, primaryNodes, allowedDiffPrecision, keys, true, nodeSensitiveName, caseSensitiveValue);
+							JsonDiff tmpDiff = checkDiff(itemA, itemE, parentRootName, rootName, path, breakOnNullNode, breakOnNullValue, primaryNodes, allowedDiffPrecision, keys, true, nodeSensitiveName,
+									caseSensitiveValue);
 							if (tmpDiff.isNoDiff()) {
 								output.incrementEqual(tmpDiff);
 							} else {
@@ -310,7 +313,7 @@ public class ComparatorService implements IComparatorService {
 				 * if (primaryNodes.isSkip(new NodeInfo(parentRootName,
 				 * rootName))) { equal = true; } else {
 				 */
-				equal = compare(rootName, rootLevelActual, rootLevelExpected, breakOnNull, allowedDiffPrecision, caseSensitiveValue);
+				equal = isEqual(rootName, rootLevelActual, rootLevelExpected, breakOnNullNode, breakOnNullValue, allowedDiffPrecision, caseSensitiveValue);
 				/* } */
 
 				if (equal) {
@@ -344,12 +347,12 @@ public class ComparatorService implements IComparatorService {
 	 * }
 	 */
 
-	private List<JsonNode> getItemById(List<JsonNode> list, String[] keys, JsonNode item, int allowedDiffPrecision, boolean caseSensitiveValue) throws IOException {
+	private List<JsonNode> getItemById(List<JsonNode> list, String[] keys, JsonNode item, int allowedDiffPrecision, boolean caseSensitiveValue, boolean breakOnNullNode, boolean breakOnNullValue) throws IOException {
 		List<JsonNode> matches = new ArrayList<>();
 		for (JsonNode s : list) {
 			//filter on key
 			for (int whereI = 0; whereI < keys.length; whereI++) {
-				if (!compare("", item.get(keys[whereI]), s.get(keys[whereI]), false, allowedDiffPrecision, caseSensitiveValue)) {
+				if (!isEqual("", item.get(keys[whereI]), s.get(keys[whereI]), breakOnNullNode, breakOnNullValue, allowedDiffPrecision, caseSensitiveValue)) {
 					continue;
 				}
 			}
@@ -366,17 +369,17 @@ public class ComparatorService implements IComparatorService {
 	}
 
 	private JsonNode getCloserItem(List<JsonNode> list, JsonNode item, NodeInfos primaryNodes, boolean primaryIncluded, int allowedDiffPrecision, String parentName, String listName, String nodePath, Keys keys,
-			boolean nodeSensitiveName, boolean caseSensitiveValue) throws IOException {
+			boolean nodeSensitiveName, boolean caseSensitiveValue, boolean breakOnNullNode, boolean breakOnNullValue) throws IOException {
 
 		JsonDiff tmpDiff = null;
 		JsonNode closerNode = null;
 
 		for (JsonNode s : list) {
 			if (closerNode == null) {//first item
-				tmpDiff = checkDiff(item, s, parentName, listName, nodePath, false, primaryNodes, allowedDiffPrecision, keys, true, nodeSensitiveName, caseSensitiveValue);
+				tmpDiff = checkDiff(item, s, parentName, listName, nodePath, breakOnNullNode, breakOnNullValue, primaryNodes, allowedDiffPrecision, keys, true, nodeSensitiveName, caseSensitiveValue);
 				closerNode = s;
 			} else {
-				JsonDiff tmpDiff2 = checkDiff(item, s, parentName, listName, nodePath, false, primaryNodes, allowedDiffPrecision, keys, true, nodeSensitiveName, caseSensitiveValue);
+				JsonDiff tmpDiff2 = checkDiff(item, s, parentName, listName, nodePath, breakOnNullNode, breakOnNullValue, primaryNodes, allowedDiffPrecision, keys, true, nodeSensitiveName, caseSensitiveValue);
 				if (tmpDiff2.diffCounter < tmpDiff.diffCounter) {
 					tmpDiff = tmpDiff2;
 					closerNode = s;
@@ -395,10 +398,11 @@ public class ComparatorService implements IComparatorService {
 	}
 
 	private List<Tuple2<JsonNode, JsonDiff>> getCloserItemForwardAndReverse(List<JsonNode> actualAsList, JsonNode itemE, NodeInfos primaryNodes, int allowedDiffPrecision, List<JsonNode> expectedAsList, int fromIndex,
-			Keys keys, String parentName, String listName, String nodePath, boolean nodeSensitiveName, boolean caseSensitiveValue) throws IOException {
+			Keys keys, String parentName, String listName, String nodePath, boolean nodeSensitiveName, boolean caseSensitiveValue, boolean breakOnNullNode, boolean breakOnNullValue) throws IOException {
 		List<Tuple2<JsonNode, JsonDiff>> target = new ArrayList<>();
 		//Step 1. Forward: fetch iExpected in ListActual
-		List<Tuple2<JsonNode, JsonDiff>> forward = getItemCorrelation(actualAsList, itemE, primaryNodes, allowedDiffPrecision, 1, keys, parentName, listName, nodePath, nodeSensitiveName, caseSensitiveValue);
+		List<Tuple2<JsonNode, JsonDiff>> forward = getItemCorrelation(actualAsList, itemE, primaryNodes, allowedDiffPrecision, 1, keys, parentName, listName, nodePath, nodeSensitiveName, caseSensitiveValue,
+				breakOnNullNode, breakOnNullValue);
 		if (forward.size() > 0) {
 			for (int index = 0; index < forward.size(); index++) {
 				Tuple2<JsonNode, JsonDiff> tuple2 = forward.get(index);
@@ -410,7 +414,7 @@ public class ComparatorService implements IComparatorService {
 				}
 				//Step 2. Reveres: fetch iActual in ListExpected
 				List<Tuple2<JsonNode, JsonDiff>> reverse = getItemCorrelation(expectedAsList.subList(fromIndex + 1, expectedAsList.size()), fJ2, primaryNodes, allowedDiffPrecision, 1, keys, parentName, listName,
-						nodePath, nodeSensitiveName, caseSensitiveValue);
+						nodePath, nodeSensitiveName, caseSensitiveValue, breakOnNullNode, breakOnNullValue);
 
 				for (Tuple2<JsonNode, JsonDiff> tuple22 : reverse) {
 					//JsonNode fJ22 = tuple22.v1;
@@ -442,12 +446,12 @@ public class ComparatorService implements IComparatorService {
 	}
 
 	private List<Tuple2<JsonNode, JsonDiff>> getItemCorrelation(List<JsonNode> list, JsonNode item, NodeInfos primaryNodes, int allowedDiffPrecision, int equalThreshold, Keys keys, String parentName, String listName,
-			String nodePath, boolean nodeSensitiveName, boolean caseSensitiveValue) throws IOException {
+			String nodePath, boolean nodeSensitiveName, boolean caseSensitiveValue, boolean breakOnNullNode, boolean breakOnNullValue) throws IOException {
 		JsonDiff tmpDiff = null;
 		List<Tuple2<JsonNode, JsonDiff>> closerNode = new ArrayList<>();
 
 		for (JsonNode s : list) {
-			tmpDiff = checkDiff(item, s, parentName, listName, nodePath, false, primaryNodes, allowedDiffPrecision, keys, true, nodeSensitiveName, caseSensitiveValue);
+			tmpDiff = checkDiff(item, s, parentName, listName, nodePath, breakOnNullNode, breakOnNullValue, primaryNodes, allowedDiffPrecision, keys, true, nodeSensitiveName, caseSensitiveValue);
 
 			if (tmpDiff.isNoDiff()) {
 				closerNode.clear();
@@ -456,7 +460,7 @@ public class ComparatorService implements IComparatorService {
 			}
 
 			if (keys.isHasKey(parentName, listName, nodePath, nodeSensitiveName)) {
-				boolean sameKeyFound = checkKeyFound(item, s, allowedDiffPrecision, keys.findPKList(parentName, listName, nodePath, nodeSensitiveName), caseSensitiveValue);
+				boolean sameKeyFound = checkKeyFound(item, s, allowedDiffPrecision, keys.findPKList(parentName, listName, nodePath, nodeSensitiveName), caseSensitiveValue, breakOnNullNode, breakOnNullValue);
 				if (sameKeyFound) {
 					closerNode.add(new Tuple2<JsonNode, JsonDiff>(s, tmpDiff));
 				}
@@ -469,12 +473,12 @@ public class ComparatorService implements IComparatorService {
 		return closerNode;
 	}
 
-	private boolean checkKeyFound(JsonNode item, JsonNode s, int allowedDiffPrecision, Key key, boolean caseSensitiveValue) {
+	private boolean checkKeyFound(JsonNode item, JsonNode s, int allowedDiffPrecision, Key key, boolean caseSensitiveValue, boolean breakOnNullNode, boolean breakOnNullValue) {
 
 		boolean found = true;
 		//filter on key
 		for (String where : key.getKeySet()) {
-			if (!compare("", item.get(where), s.get(where), false, allowedDiffPrecision, caseSensitiveValue)) {
+			if (!isEqual("", item.get(where), s.get(where), breakOnNullNode, breakOnNullValue, allowedDiffPrecision, caseSensitiveValue)) {
 				found = false;
 				break;
 			}

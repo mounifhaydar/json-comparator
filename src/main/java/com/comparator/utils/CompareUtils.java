@@ -31,7 +31,7 @@ public class CompareUtils {
 	//public static Function<String, String> escape = (x) -> x.replace("\"", "\\\"");
 	//private static double											allowedDiffPrecision		= 0.01;
 
-	public static boolean compare(String rootName, JsonNode actual, JsonNode expected, boolean breakOnNull, int allowedDiffPrecision, boolean caseSensitive) {
+	public static boolean isEqual(String rootName, JsonNode actual, JsonNode expected, boolean breakOnNullNode, boolean breakOnNullValue, int allowedDiffPrecision, boolean caseSensitive) {
 		boolean equal = false;
 		actual = actual == null ? JsonNodeFactory.instance.nullNode() : actual;
 		expected = expected == null ? JsonNodeFactory.instance.nullNode() : expected;
