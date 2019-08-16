@@ -63,7 +63,7 @@ public class ComparatorService implements IComparatorService {
 		JsonNode expected = compare.getExpected();
 		JsonDiff diff;
 		long startTime = System.currentTimeMillis();
-		diff = checkDiff(actual, expected, "", "root", "root", false, true, new NodeInfos(compare.isPrimaryIncluded(), compare.getPrimaryNodes()), compare.getPrecision(), new Keys(compare.getKeys()), false,
+		diff = checkDiff(actual, expected, "", "root", "root", false, false, new NodeInfos(compare.isPrimaryIncluded(), compare.getPrimaryNodes()), compare.getPrecision(), new Keys(compare.getKeys()), false,
 				compare.isNodeSensitiveName(), compare.isCaseSensitiveValue()).addJsonBorder();
 		diff.setDiff(new StringBuilder(jsonBeautify(diff.diff.toString(), mapperIndent)));
 
@@ -115,20 +115,25 @@ public class ComparatorService implements IComparatorService {
 			return JsonDiff.noDiff();//last child
 		} else if (rootLevelActual == null && rootLevelExpected != null/* 0 1 */) {//check input if valid
 			isActualNull = true;
-			if (breakOnNullNode)
+			if (breakOnNullNode) {
 				return JsonDiff.diff(writeAsJson(nodeCompare, new String[] { nodeNotFound, rootLevelExpected.toString() })).setNodeName(rootName);//last child
-
+			} else {
+				rootLevelActual = JsonNodeFactory.instance.nullNode();
+			}
 		} else if (rootLevelActual != null && rootLevelExpected == null/* 1 0 */) {
 			isExpectedNull = true;
-			if (breakOnNullNode)
+			if (breakOnNullNode) {
 				return JsonDiff.diff(writeAsJson(nodeCompare, new String[] { rootLevelActual.toString(), nodeNotFound })).setNodeName(rootName);//last child
 
-		} else if (rootLevelActual.isNull() && rootLevelExpected.isNull()) {//null null
+			} else {
+				rootLevelExpected = JsonNodeFactory.instance.nullNode();
+			}
+		} /*else if (rootLevelActual.isNull() && rootLevelExpected.isNull()) {//null null
 			return JsonDiff.noDiff();
 		} else if ((rootLevelActual.isNull() || rootLevelExpected.isNull())) {// not null null
 			if (breakOnNullNode)
 				return JsonDiff.diff(writeAsJson(nodeCompare, new String[] { rootLevelActual.toString(), rootLevelExpected.toString() })).setNodeName(rootName);//last child
-		}
+		}*/
 
 		//input exist, so compare the items: KEY/VALUE
 

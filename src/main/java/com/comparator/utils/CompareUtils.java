@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.function.BiFunction;
+import java.util.function.BiPredicate;
 
 import com.fasterxml.jackson.core.JsonEncoding;
 import com.fasterxml.jackson.core.JsonFactory;
@@ -13,7 +14,6 @@ import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 
 public class CompareUtils {
 	private static final String										CLAIM_ETERNAL_REF	= "(EA\\d+/\\d+)" + "|" + "(C\\d+/\\d+)" + "|" + "(ECLAIM\\d+/\\d+)";
@@ -33,12 +33,13 @@ public class CompareUtils {
 
 	public static boolean isEqual(String rootName, JsonNode actual, JsonNode expected, boolean breakOnNullNode, boolean breakOnNullValue, int allowedDiffPrecision, boolean caseSensitive) {
 		boolean equal = false;
-		actual = actual == null ? JsonNodeFactory.instance.nullNode() : actual;
-		expected = expected == null ? JsonNodeFactory.instance.nullNode() : expected;
+		//actual = actual == null ? JsonNodeFactory.instance.nullNode() : actual;
+		//expected = expected == null ? JsonNodeFactory.instance.nullNode() : expected;
 
+		BiPredicate<Boolean, Boolean> checkType = (a, e) -> a && e || (!breakOnNullValue) && (a || e);
 		if (actual.isNull() && expected.isNull()) {
 			return true;
-		} else if (actual.isNumber() && expected.isNumber()) {
+		} else if (checkType.test(actual.isNumber(), expected.isNumber())) {
 			double a = actual.asDouble();
 			double e = expected.asDouble();
 
@@ -47,7 +48,7 @@ public class CompareUtils {
 			} else {
 				equal = true;
 			}
-		} else if (actual.isBoolean() && expected.isBoolean()) {
+		} else if (checkType.test(actual.isBoolean(), expected.isBoolean())) {
 			boolean a = actual.asBoolean();
 			boolean e = expected.asBoolean();
 			if (a != e) {
@@ -55,7 +56,7 @@ public class CompareUtils {
 			} else {
 				equal = true;
 			}
-		} else if (actual.isTextual() && expected.isTextual()) {
+		} else if (checkType.test(actual.isTextual(), expected.isTextual())) {
 			String[] a = cleanNode(actual, caseSensitive);
 			String[] e = cleanNode(expected, caseSensitive);
 			equal = Arrays.equals(a, e);
