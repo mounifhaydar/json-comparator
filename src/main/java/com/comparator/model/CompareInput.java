@@ -16,8 +16,8 @@ import lombok.Setter;
 public class CompareInput {
 	private JsonNode		actual;
 	private JsonNode		expected;
-	private List<NodeInfo>	primaryNodes;
-	private boolean			primaryIncluded;
+	private List<NodeInfo>	selectedNodes;
+	private boolean			selectedIncluded;
 	private List<Key>		keys;
 	private int				precision;
 	boolean					nodeSensitiveName;
