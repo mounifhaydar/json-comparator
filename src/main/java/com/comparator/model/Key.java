@@ -14,4 +14,11 @@ import lombok.Setter;
 public class Key extends NodeInfo {
 	private boolean			unique;
 	private List<String>	keySet;
+
+	public Key(String parentNodeName, String nodeName, String path, boolean unique, List<String> keySet) {
+		super(parentNodeName, nodeName, path);
+		this.unique = unique;
+		this.keySet = keySet;
+	}
+
 }
