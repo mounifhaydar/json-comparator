@@ -19,8 +19,12 @@ public class CompareUtils {
 	private static final String										CLAIM_ETERNAL_REF	= "(EA\\d+/\\d+)" + "|" + "(C\\d+/\\d+)" + "|" + "(ECLAIM\\d+/\\d+)";
 	private static final String[]									ALERTS				= { "Unable to Load Conditions", "Contraindication between Drug", "may represent duplicate therapy",
 			"has to managed or treated before the drug" };
-	private static final String[]									DERTY_CLEAN			= { "?", "'", "\u2019", "'", "&quot;", "'", "&apos;", "'", "null", "", " 0.0 ", " 0 ", ".0\"", "\"", "false", "NO", "true", "YES",
-			"may represent a duplication in therapy", "may represent duplicate therapy", "#", "", ".", "" };
+	/*
+	 * private static final String[] DERTY_CLEAN = { "?", "'", "\u2019", "'",
+	 * "&quot;", "'", "&apos;", "'", "null", "", " 0.0 ", " 0 ", ".0\"", "\"",
+	 * "false", "NO", "true", "YES", "may represent a duplication in therapy",
+	 * "may represent duplicate therapy", "#", "", ".", "" };
+	 */
 
 	public static BiFunction<Integer, Integer, Integer>				nvlInteger			= (x, def) -> x == null ? def : x;
 	public static BiFunction<Long, Long, Long>						nvlLong				= (x, def) -> x == null ? def : x;
@@ -31,7 +35,7 @@ public class CompareUtils {
 	//public static Function<String, String> escape = (x) -> x.replace("\"", "\\\"");
 	//private static double											allowedDiffPrecision		= 0.01;
 
-	public static boolean isEqual(String rootName, JsonNode actual, JsonNode expected, boolean breakOnNullNode, boolean breakOnNullValue, int allowedDiffPrecision, boolean caseSensitive) {
+	public static boolean isEqual(String rootName, JsonNode actual, JsonNode expected, boolean breakOnNullNode, boolean breakOnNullValue, int allowedDiffPrecision, boolean caseSensitive, String[] dertyClean) {
 		boolean equal = false;
 		//actual = actual == null ? JsonNodeFactory.instance.nullNode() : actual;
 		//expected = expected == null ? JsonNodeFactory.instance.nullNode() : expected;
@@ -57,24 +61,26 @@ public class CompareUtils {
 				equal = true;
 			}
 		} else if (checkType.test(actual.isTextual(), expected.isTextual())) {
-			String[] a = cleanNode(actual, caseSensitive);
-			String[] e = cleanNode(expected, caseSensitive);
+			String[] a = cleanNode(actual, caseSensitive, dertyClean);
+			String[] e = cleanNode(expected, caseSensitive, dertyClean);
 			equal = Arrays.equals(a, e);
 
 		} else {//default equal
-			String[] a = cleanNode(actual, caseSensitive);
-			String[] e = cleanNode(expected, caseSensitive);
+			String[] a = cleanNode(actual, caseSensitive, dertyClean);
+			String[] e = cleanNode(expected, caseSensitive, dertyClean);
 			equal = Arrays.equals(a, e);
 		}
 		return equal;
 	}
 
-	public static String[] cleanNode(JsonNode n, boolean caseSensitive) {
+	public static String[] cleanNode(JsonNode n, boolean caseSensitive, String[] dertyClean) {
 		String in = n.asText().trim();
 		String[] out = null;
 
-		for (int i = 0; i < DERTY_CLEAN.length - 1; i += 2) {
-			in = in.replace(DERTY_CLEAN[i], DERTY_CLEAN[i + 1]);
+		if (dertyClean != null) {
+			for (int i = 0; i < dertyClean.length - 1; i += 2) {
+				in = in.replace(dertyClean[i], dertyClean[i + 1]);
+			}
 		}
 
 		if (in.equals("0") || in.equals("0.0")) {//@Now Zero is same as empty string

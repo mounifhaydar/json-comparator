@@ -98,11 +98,13 @@ public class ComparatorService implements IComparatorService {
 
 		Keys keys = compare.getKeys();
 		int allowedDiffPrecision = compare.getPrecisions().allowedDiff(path, nodeSensitiveName);
+		String[] itemCleaner = compare.getDirtyCleans().itemCleaner(path, nodeSensitiveName);
+		
 		SelectedNodes selectedNodes = compare.getSelectedNodes();
 
 		//before start the compare check if the node is included in the result
 		if (selectedNodes.isSkip(path, nodeSensitiveName)) {
-			return JsonDiff.noDiff();
+			return JsonDiff.inDiff();
 		}
 
 		//LEVEL 1 : check root if exist
@@ -311,7 +313,7 @@ public class ComparatorService implements IComparatorService {
 				 * if (primaryNodes.isSkip(new NodeInfo(parentRootName,
 				 * rootName))) { equal = true; } else {
 				 */
-				equal = isEqual(rootName, rootLevelActual, rootLevelExpected, breakOnNullNode, breakOnNullValue, allowedDiffPrecision, caseSensitiveValue);
+				equal = isEqual(rootName, rootLevelActual, rootLevelExpected, breakOnNullNode, breakOnNullValue, allowedDiffPrecision, caseSensitiveValue, itemCleaner);
 				/* } */
 
 				if (equal) {
@@ -345,12 +347,12 @@ public class ComparatorService implements IComparatorService {
 	 * }
 	 */
 
-	private List<JsonNode> getItemById(List<JsonNode> list, String[] keys, JsonNode item, int allowedDiffPrecision, boolean caseSensitiveValue, boolean breakOnNullNode, boolean breakOnNullValue) throws IOException {
+	private List<JsonNode> getItemById(List<JsonNode> list, String[] keys, JsonNode item, int allowedDiffPrecision, boolean caseSensitiveValue, boolean breakOnNullNode, boolean breakOnNullValue, String[] dertyClean) throws IOException {
 		List<JsonNode> matches = new ArrayList<>();
 		for (JsonNode s : list) {
 			//filter on key
 			for (int whereI = 0; whereI < keys.length; whereI++) {
-				if (!isEqual("", item.get(keys[whereI]), s.get(keys[whereI]), breakOnNullNode, breakOnNullValue, allowedDiffPrecision, caseSensitiveValue)) {
+				if (!isEqual("", item.get(keys[whereI]), s.get(keys[whereI]), breakOnNullNode, breakOnNullValue, allowedDiffPrecision, caseSensitiveValue, dertyClean)) {
 					continue;
 				}
 			}
@@ -450,7 +452,8 @@ public class ComparatorService implements IComparatorService {
 
 		Keys keys = compare.getKeys();
 		int allowedDiffPrecision = compare.getPrecisions().allowedDiff(nodePath, nodeSensitiveName);
-
+		String[] itemCleaner = compare.getDirtyCleans().itemCleaner(nodePath, nodeSensitiveName);
+		
 		JsonDiff tmpDiff = null;
 		List<Tuple2<JsonNode, JsonDiff>> closerNode = new ArrayList<>();
 
@@ -465,7 +468,7 @@ public class ComparatorService implements IComparatorService {
 
 			if (keys.isHasKey(nodePath, nodeSensitiveName)) {
 				boolean sameKeyFound = checkKeyFound(item, s, allowedDiffPrecision, keys.getNodeInfo(
-						nodePath/* parentName, listName, nodePath */, nodeSensitiveName), caseSensitiveValue, breakOnNullNode, breakOnNullValue);
+						nodePath/* parentName, listName, nodePath */, nodeSensitiveName), caseSensitiveValue, breakOnNullNode, breakOnNullValue, itemCleaner);
 				if (sameKeyFound) {
 					closerNode.add(new Tuple2<JsonNode, JsonDiff>(s, tmpDiff));
 				}
@@ -478,12 +481,12 @@ public class ComparatorService implements IComparatorService {
 		return closerNode;
 	}
 
-	private boolean checkKeyFound(JsonNode item, JsonNode s, int allowedDiffPrecision, Key key, boolean caseSensitiveValue, boolean breakOnNullNode, boolean breakOnNullValue) {
+	private boolean checkKeyFound(JsonNode item, JsonNode s, int allowedDiffPrecision, Key key, boolean caseSensitiveValue, boolean breakOnNullNode, boolean breakOnNullValue, String[] dertyClean) {
 
 		boolean found = true;
 		//filter on key
 		for (String where : key.getKeySet()) {
-			if (!isEqual("", item.get(where), s.get(where), breakOnNullNode, breakOnNullValue, allowedDiffPrecision, caseSensitiveValue)) {
+			if (!isEqual("", item.get(where), s.get(where), breakOnNullNode, breakOnNullValue, allowedDiffPrecision, caseSensitiveValue, dertyClean)) {
 				found = false;
 				break;
 			}

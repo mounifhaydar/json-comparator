@@ -120,6 +120,10 @@ public class JsonDiff implements Comparable<JsonDiff> {
 		return new JsonDiff(new StringBuilder(""), 0, 1);
 	}
 
+	public static JsonDiff inDiff() {
+		return new JsonDiff(new StringBuilder(""), 0, 0);
+	}
+
 	/**
 	 * diff: ""<br>
 	 * equal: 0<br>

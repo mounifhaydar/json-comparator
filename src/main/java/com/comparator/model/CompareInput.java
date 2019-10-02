@@ -19,4 +19,6 @@ public class CompareInput {
 	boolean					nodeSensitiveName;
 	boolean					caseSensitiveValue;
 	private Precisions		precisions;
+	private DirtyCleans		dirtyCleans;
+
 }
