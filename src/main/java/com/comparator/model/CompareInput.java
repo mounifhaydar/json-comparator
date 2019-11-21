@@ -14,11 +14,11 @@ import lombok.Setter;
 public class CompareInput {
 	private JsonNode		actual;
 	private JsonNode		expected;
-	private SelectedNodes	selectedNodes;
-	private Keys			keys;
+	private SelectedNodes	selectedNodes = new SelectedNodes();
+	private Keys			keys = new Keys();
 	boolean					nodeSensitiveName;
 	boolean					caseSensitiveValue;
-	private Precisions		precisions;
-	private DirtyCleans		dirtyCleans;
+	private Precisions		precisions = new Precisions();
+	private DirtyCleans		dirtyCleans = new DirtyCleans();
 
 }
