@@ -4,6 +4,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 
@@ -148,5 +149,20 @@ public class CompareUtils {
 			jsonStr = mapperIndent.writeValueAsString(compareResult);
 		}
 		return jsonStr;
+	}
+	
+	public static JsonNode getIgnoreCase(String nodeName, JsonNode jsonNode) {
+		JsonNode result = jsonNode.get(nodeName);
+		if (result == null) {
+			Iterator<String> fieldNames = jsonNode.fieldNames();
+			while (fieldNames.hasNext()) {
+				String fieldName = fieldNames.next();
+				if (nodeName.equalsIgnoreCase(fieldName)) {
+					result = jsonNode.get(fieldName);
+					break;
+				}
+			}
+		}
+		return result;
 	}
 }

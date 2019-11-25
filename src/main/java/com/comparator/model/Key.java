@@ -1,5 +1,6 @@
 package com.comparator.model;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import lombok.AllArgsConstructor;
@@ -13,7 +14,7 @@ import lombok.Setter;
 @NoArgsConstructor
 public class Key extends NodeInfo {
 	private boolean			unique;
-	private List<String>	keySet;
+	private List<String>	keySet	= new ArrayList<String>();
 
 	public Key(String parentNodeName, String nodeName, String path, boolean unique, List<String> keySet) {
 		super(parentNodeName, nodeName, path);
