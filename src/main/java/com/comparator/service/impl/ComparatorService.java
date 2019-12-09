@@ -218,7 +218,7 @@ public class ComparatorService implements IComparatorService {
 					} else if (!rootLevelActual.fieldNames().hasNext() && rootLevelExpected.fieldNames().hasNext()) {
 						return JsonDiff.diff(objectIsEmpty, String.format(objectFields, parentName), mapperIndent.createObjectNode());//.setNodeName(rootName);
 					}
-					output.appendNodeDiff(rootName, tmpDiff, null);
+					output.appendNodeDiff(parentName, tmpDiff, null);
 				}
 			}
 			/*
