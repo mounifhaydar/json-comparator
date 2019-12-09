@@ -1,20 +1,17 @@
 package com.comparator.service.impl;
 
-import static com.comparator.utils.CompareUtils.isEqual;
-import static com.comparator.utils.CompareUtils.jsonBeautify;
 //import static com.comparator.utils.CompareUtils.isEmptyNode;
-import static com.comparator.utils.CompareUtils.writeAsJson;
+//import static com.comparator.utils.CompareUtils.writeAsJson;
 import static com.comparator.utils.CompareUtils.getIgnoreCase;
+import static com.comparator.utils.CompareUtils.isEqual;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 import org.apache.commons.collections4.IteratorUtils;
@@ -30,10 +27,7 @@ import com.comparator.model.CompareInput;
 import com.comparator.model.JsonDiff;
 import com.comparator.model.Key;
 import com.comparator.model.Keys;
-import com.comparator.model.NodeInfo;
-import com.comparator.model.Precisions;
 import com.comparator.model.SelectedNodes;
-import com.comparator.model.ANodeInfo;
 import com.comparator.service.IComparatorService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -64,8 +58,8 @@ public class ComparatorService implements IComparatorService {
 		compare.setExpected(null);
 
 		long startTime = System.currentTimeMillis();
-		diff = checkDiff(compare, actual, expected, "", "root", "root", false, false, false).addJsonBorder();
-		diff.setDiff(new StringBuilder(jsonBeautify(diff.diff.toString(), mapperIndent)));
+		diff = checkDiff(compare, actual, expected, "", "root", "root", false, false, false);//.addJsonBorder();
+		//diff.setDiff(new StringBuilder(jsonBeautify(diff.diff.toString(), mapperIndent)));
 
 		LOGGER.info("execution time:" + ((System.currentTimeMillis() - startTime) / 1000) + " (seconds)");
 
@@ -100,7 +94,6 @@ public class ComparatorService implements IComparatorService {
 		String objectFields = "%s...";
 		String arrayIsEmpty = "Array is empty";
 		String arraySize = "Array size: %s";
-		String[] nodeCompare = new String[] { "actual", "expected" };
 
 		boolean nodeSensitiveName = compare.isNodeSensitiveName();
 		boolean caseSensitiveValue = compare.isCaseSensitiveValue();
@@ -112,7 +105,7 @@ public class ComparatorService implements IComparatorService {
 
 		//before start the compare check if the node is included in the result
 		if (selectedNodes.isSkip(path, nodeSensitiveName)) {
-			return JsonDiff.inDiff();
+			return JsonDiff.neutralDiff(mapperIndent.createObjectNode());
 		}
 
 		//LEVEL 1 : check root if exist
@@ -120,17 +113,18 @@ public class ComparatorService implements IComparatorService {
 		boolean isActualNull = rootLevelActual == null;
 		boolean isExpectedNull = rootLevelExpected == null;
 		if (isActualNull && isExpectedNull/* 0 0 */) {
-			return JsonDiff.noDiff();//last child
+			return JsonDiff.noDiff(mapperIndent.createObjectNode());//last child
 		} else if (isActualNull && !isExpectedNull/* 0 1 */) {//check input if valid
 			if (breakOnNullNode) {
-				return JsonDiff.diff(writeAsJson(nodeCompare, new String[] { nodeNotFound, rootLevelExpected.toString() })).setNodeName(rootName);//last child
+				//return JsonDiff.diff(writeAsJson(nodeCompare, new String[] { nodeNotFound, rootLevelExpected.toString() })).setNodeName(rootName);//last child
+				return JsonDiff.diff(nodeNotFound, rootLevelExpected.toString(), mapperIndent.createObjectNode());
 			} else {
 				rootLevelActual = JsonNodeFactory.instance.nullNode();
 			}
 		} else if (!isActualNull && isExpectedNull/* 1 0 */) {
 			if (breakOnNullNode) {
-				return JsonDiff.diff(writeAsJson(nodeCompare, new String[] { rootLevelActual.toString(), nodeNotFound })).setNodeName(rootName);//last child
-
+				//return JsonDiff.diff(writeAsJson(nodeCompare, new String[] { rootLevelActual.toString(), nodeNotFound })).setNodeName(rootName);//last child
+				return JsonDiff.diff(rootLevelActual.toString(), nodeNotFound, mapperIndent.createObjectNode());
 			} else {
 				rootLevelExpected = JsonNodeFactory.instance.nullNode();
 			}
@@ -158,9 +152,10 @@ public class ComparatorService implements IComparatorService {
 		//check if one is empty
 		if (breakOnNullNode) {
 			if (aFieldsItr.hasNext() && !eFieldsItr.hasNext()) {
-				return JsonDiff.diff(writeAsJson(nodeCompare, new String[] { String.format(objectFields, aFieldsItr.next()), objectIsEmpty })).setNodeName(rootName);
+				//return JsonDiff.diff(writeAsJson(nodeCompare, new String[] { String.format(objectFields, aFieldsItr.next()), objectIsEmpty })).setNodeName(rootName);
+				return JsonDiff.diff(String.format(objectFields, aFieldsItr.next()), objectIsEmpty, mapperIndent.createObjectNode());//.setNodeName(rootName);
 			} else if (!aFieldsItr.hasNext() && eFieldsItr.hasNext()) {
-				return JsonDiff.diff(writeAsJson(nodeCompare, new String[] { objectIsEmpty, String.format(objectFields, eFieldsItr.next()) })).setNodeName(rootName);
+				return JsonDiff.diff(objectIsEmpty, String.format(objectFields, eFieldsItr.next()), mapperIndent.createObjectNode());//.setNodeName(rootName);
 			}
 		} else {
 			//Object Empty so set to JsonNull node, null or {}
@@ -205,7 +200,7 @@ public class ComparatorService implements IComparatorService {
 
 		if (allFieldsItr.hasNext()) {//Loop over the Node's
 			//LEVEL 3: loop over the child
-			JsonDiff output = JsonDiff.init();
+			JsonDiff output = JsonDiff.init(mapperIndent.createObjectNode());
 			while (allFieldsItr.hasNext()) {
 				String parentName = allFieldsItr.next();
 				String nodePath = path + "." + parentName;
@@ -219,16 +214,18 @@ public class ComparatorService implements IComparatorService {
 					//Diff found
 					//if object is empty, so no need to loop over the Node's
 					if (rootLevelActual.fieldNames().hasNext() && !rootLevelExpected.fieldNames().hasNext()) {
-						return JsonDiff.diff(writeAsJson(nodeCompare, new String[] { String.format(objectFields, parentName), objectIsEmpty })).setNodeName(rootName);
+						return JsonDiff.diff(String.format(objectFields, parentName), objectIsEmpty, mapperIndent.createObjectNode());//.setNodeName(rootName);
 					} else if (!rootLevelActual.fieldNames().hasNext() && rootLevelExpected.fieldNames().hasNext()) {
-						return JsonDiff.diff(writeAsJson(nodeCompare, new String[] { objectIsEmpty, String.format(objectFields, parentName) })).setNodeName(rootName);
+						return JsonDiff.diff(objectIsEmpty, String.format(objectFields, parentName), mapperIndent.createObjectNode());//.setNodeName(rootName);
 					}
-					output.appendDiff(tmpDiff);
+					output.appendNodeDiff(rootName, tmpDiff, null);
 				}
 			}
-			if (!isItemOfArray) {
-				output.addJsonBorder().setNodeName(rootName);//parent level, and grand parent
-			}
+			/*
+			 * if (!isItemOfArray) {
+			 * output.addJsonBorder().setNodeName(rootName);//parent level, and
+			 * grand parent }
+			 */
 
 			return output;
 		} else {//LEVEL 4: one child, Single Node
@@ -237,7 +234,7 @@ public class ComparatorService implements IComparatorService {
 
 				//long startTime = System.currentTimeMillis();
 				//System.out.println("Array path:" + path);
-				JsonDiff output = JsonDiff.init();
+				JsonDiff output = JsonDiff.init(mapperIndent.createArrayNode());
 				List<JsonNode> actualAsList = new ArrayList<>();
 				List<JsonNode> expectedAsList = new ArrayList<>();
 				List<JsonNode> actualAsListCopy = new ArrayList<>();
@@ -257,17 +254,17 @@ public class ComparatorService implements IComparatorService {
 				//check if one is an empty array, => return
 
 				if (actualAsList.size() == 0 && expectedAsList.size() == 0) {
-					return JsonDiff.noDiff();
+					return JsonDiff.noDiff(mapperIndent.createObjectNode());
 				} else if (actualAsList.size() == 0 && expectedAsList.size() != 0) {
 					for (int i = 0; i < expectedAsList.size(); i++) {
 						JsonNode itemE = expectedAsList.get(i);
 						JsonNode itemA = JsonNodeFactory.instance.nullNode();
 						JsonDiff tmpDiff = checkDiff(compare, itemA, itemE, parentRootName, rootName, path, breakOnNullNode, breakOnNullValue, true);
 						if (!tmpDiff.isNoDiff()) {
-							return JsonDiff.diff(writeAsJson(nodeCompare, new String[] { arrayIsEmpty, String.format(arraySize, expectedAsList.size()) })).setNodeName(rootName);
+							return JsonDiff.diff(arrayIsEmpty, String.format(arraySize, expectedAsList.size()), mapperIndent.createObjectNode());//.setNodeName(rootName);
 						}
 					}
-					return JsonDiff.noDiff();
+					return JsonDiff.noDiff(mapperIndent.createObjectNode());
 
 				} else if (actualAsList.size() != 0 && expectedAsList.size() == 0) {//if one is an empty array
 					for (int i = 0; i < actualAsList.size(); i++) {
@@ -275,10 +272,10 @@ public class ComparatorService implements IComparatorService {
 						JsonNode itemA = actualAsList.get(i);
 						JsonDiff tmpDiff = checkDiff(compare, itemA, itemE, parentRootName, rootName, path, breakOnNullNode, breakOnNullValue, true);
 						if (!tmpDiff.isNoDiff()) {
-							return JsonDiff.diff(writeAsJson(nodeCompare, new String[] { String.format(arraySize, actualAsList.size()), arrayIsEmpty })).setNodeName(rootName);
+							return JsonDiff.diff(String.format(arraySize, actualAsList.size()), arrayIsEmpty, mapperIndent.createObjectNode());//.setNodeName(rootName);
 						}
 					}
-					return JsonDiff.noDiff();
+					return JsonDiff.noDiff(mapperIndent.createArrayNode());
 				}
 
 				boolean duplicatedKey = false;
@@ -308,8 +305,17 @@ public class ComparatorService implements IComparatorService {
 					if ((sA.size() > 1 || duplicatedKey) && denyDuplication) {//no unique key,
 						//do not remove from list, to find duplication next loop
 						String itemFoundKey = generateItemKeyStr(keys.getNodeInfo(path, nodeSensitiveName), itemE);
-						output.appendDiff(JsonDiff.diff(writeAsJson(nodeCompare, new String[] { noUniqueItem, itemFoundKey }))
-								.setNodeName(rootName + ".Item[" + generateItemName(compare, path, keys, itemE, expectedAsListCopy) + "]").addJsonBorder());
+						/*
+						 * output.appendDiff(JsonDiff.diff(writeAsJson(
+						 * nodeCompare, new String[] { noUniqueItem,
+						 * itemFoundKey })) .setNodeName(rootName + ".Item[" +
+						 * generateItemName(compare, path, keys, itemE,
+						 * expectedAsListCopy) + "]").addJsonBorder());
+						 */
+
+						output.appendNodeDiff(rootName + ".Item[" + generateItemName(compare, path, keys, itemE, expectedAsListCopy) + "]", JsonDiff.diff(noUniqueItem, itemFoundKey, mapperIndent.createObjectNode()),
+								mapperIndent);
+
 						for (JsonNode aTb : sA) {
 							actualToBeRemoved.add(aTb);
 						}
@@ -320,15 +326,17 @@ public class ComparatorService implements IComparatorService {
 							if (tmpDiff.isNoDiff()) {
 								output.incrementEqual(tmpDiff);
 							} else {
-								tmpDiff.addJsonBorder().setNodeName(rootName + ".Item[" + generateItemName(compare, path, keys, itemE, expectedAsListCopy) + "]");
-								tmpDiff.addJsonBorder();
-								output.appendDiff(tmpDiff);
+								//tmpDiff.addJsonBorder().setNodeName();
+								//tmpDiff.addJsonBorder();
+								output.appendNodeDiff(rootName + ".Item[" + generateItemName(compare, path, keys, itemE, expectedAsListCopy) + "]", tmpDiff, mapperIndent);
 							}
 							actualAsList.remove(itemA);
 						} else {//size 0
 							String itemFoundKey = generateItemKeyStr(keys.getNodeInfo(path, nodeSensitiveName), itemE);
-							output.appendDiff(JsonDiff.diff(writeAsJson(nodeCompare, new String[] { itemNotFound, itemFoundKey }))
-									.setNodeName(rootName + ".Item[" + generateItemName(compare, path, keys, itemE, expectedAsListCopy) + "]").addJsonBorder());
+							output.appendNodeDiff(rootName + ".Item[" + generateItemName(compare, path, keys, itemE, expectedAsListCopy) + "]", JsonDiff.diff(itemNotFound, itemFoundKey, mapperIndent.createObjectNode()),
+									mapperIndent);
+
+							;
 						}
 					}
 				}
@@ -341,17 +349,17 @@ public class ComparatorService implements IComparatorService {
 						//check if key duplicated is the list itself
 						duplicatedKey = getItemCorrelation(compare, actualAsList, n, 1, parentRootName, rootName, path, breakOnNullNode, breakOnNullValue).size() > 1;
 						if (denyDuplication && duplicatedKey) {
-							output.appendDiff(JsonDiff.diff(writeAsJson(nodeCompare, new String[] { noUniqueItem, itemFoundKey }))
-									.setNodeName(rootName + ".Item[" + generateItemName(compare, path, keys, n, actualAsListCopy) + "]").addJsonBorder());
+							output.appendNodeDiff(rootName + ".Item[" + generateItemName(compare, path, keys, n, actualAsListCopy) + "]", JsonDiff.diff(noUniqueItem, itemFoundKey, mapperIndent.createObjectNode()),
+									mapperIndent);
 						} else {
-							output.appendDiff(JsonDiff.diff(writeAsJson(nodeCompare, new String[] { itemFoundKey, itemNotFound }))
-									.setNodeName(rootName + ".Item[" + generateItemName(compare, path, keys, n, actualAsListCopy) + "]").addJsonBorder());
+							output.appendNodeDiff(rootName + ".Item[" + generateItemName(compare, path, keys, n, actualAsListCopy) + "]", JsonDiff.diff(itemFoundKey, itemNotFound, mapperIndent.createObjectNode()),
+									mapperIndent);
 						}
 
 					}
 				}
 
-				output.addArrayBorder().setNodeName(rootName);//array level
+				//output.addArrayBorder().setNodeName(rootName);//array level
 
 				//System.out.println("execution time of \n" + path + ": \n" + ((System.currentTimeMillis() - startTime) / 1000)+" (seconds)");
 				return output;
@@ -369,10 +377,10 @@ public class ComparatorService implements IComparatorService {
 				/* } */
 
 				if (equal) {
-					return JsonDiff.noDiff();
+					return JsonDiff.noDiff(mapperIndent.createObjectNode());
 				} else {
-					return JsonDiff.diff(writeAsJson(nodeCompare, new String[] { isActualNull ? nodeNotFound : rootLevelActual.toString(), isExpectedNull ? nodeNotFound : rootLevelExpected.toString() }))
-							.setNodeName(rootName);//last child
+					return JsonDiff.diff(isActualNull ? nodeNotFound : rootLevelActual.toString(), isExpectedNull ? nodeNotFound : rootLevelExpected.toString(), mapperIndent.createObjectNode());
+					//.setNodeName(rootName);//last child
 				}
 
 			}

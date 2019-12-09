@@ -9,6 +9,7 @@ import org.json.simple.parser.ParseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -20,12 +21,17 @@ import com.comparator.model.CompareInput;
 import com.comparator.model.JsonDiff;
 import com.comparator.service.IComparatorService;
 import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 @RestController
 @RequestMapping("/comparator")
 public class ComparatorController {
 	private final Logger		logger	= LoggerFactory.getLogger(ComparatorController.class);
 
+	@Autowired
+	@Qualifier("mapperIndent")
+	private ObjectMapper		mapperIndent;
+	
 	@Autowired
 	private IComparatorService	comparatorService;
 
@@ -37,7 +43,7 @@ public class ComparatorController {
 		try {
 			logger.info("start compare");
 			jsonDiff = comparatorService.compareJson(compare);
-			diff = jsonDiff.diff.toString();
+			diff = mapperIndent.writeValueAsString(jsonDiff.diffNode);
 			logger.info("finish compare");
 		} catch (JsonParseException e) {
 			e.printStackTrace();

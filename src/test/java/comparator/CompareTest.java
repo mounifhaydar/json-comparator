@@ -50,8 +50,8 @@ public class CompareTest {
 	public void testOrder() {
 		List<JsonDiff> l1 = new ArrayList<JsonDiff>();
 
-		l1.add(new JsonDiff(new StringBuilder(""), 7, 2));
-		l1.add(new JsonDiff(new StringBuilder(""), 6, 1));
+		l1.add(new JsonDiff(null, 7, 2));
+		l1.add(new JsonDiff(null, 6, 1));
 
 		//l1.sort(c);
 		//Collections.sort((List<T>) l1);

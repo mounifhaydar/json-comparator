@@ -1,14 +1,17 @@
 package com.comparator.model;
 
-import java.io.IOException;
+//import static com.comparator.utils.CompareUtils.writeJsonField;
+import static com.comparator.utils.CompareUtils.createJson;
+
 import java.util.Comparator;
-import java.util.function.Consumer;
+import java.util.HashSet;
 
 import org.jooq.lambda.tuple.Tuple2;
-import static com.comparator.utils.CompareUtils.writeJsonField;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -22,12 +25,18 @@ import lombok.Setter;
 @RequiredArgsConstructor
 public class JsonDiff implements Comparable<JsonDiff> {
 
+	//@NonNull
+	//public StringBuilder	diff;
 	@NonNull
-	public StringBuilder	diff;
+	public JsonNode					diffNode;											//{}
 	@NonNull
-	public Integer			diffCounter;
+	public Integer					diffCounter;
 	@NonNull
-	public Integer			equalCounter;
+	public Integer					equalCounter;
+	//@NonNull
+	//HashSet<String>					fieldsSet;
+
+	private static final String[]	nodeCompare	= new String[] { "actual", "expected" };
 
 	/**
 	 * diff1 +<b>,</b>+ diff2 <br>
@@ -35,11 +44,18 @@ public class JsonDiff implements Comparable<JsonDiff> {
 	 * 
 	 * @param diff
 	 */
-	public void appendDiff(JsonDiff diff) {
-		stringAppender.accept(this.diff);
-		this.diff.append(diff.diff);
+	public void appendNodeDiff(String nodeName, JsonDiff diff, ObjectMapper mapperIndent) {
+		//stringAppender.accept(this.diff);
+		if (diffNode instanceof ObjectNode) {
+			((ObjectNode) this.diffNode).set(nodeName, diff.diffNode);
+		} else {
+			ObjectNode item = mapperIndent.createObjectNode();
+			item.set(nodeName, diff.diffNode);
+			((ArrayNode) this.diffNode).add(item);
+		}
 		diffCounter += diff.diffCounter;
 		equalCounter += diff.equalCounter;
+		//fieldsSet.addAll(diff.fieldsSet);
 	}
 
 	/**
@@ -56,24 +72,20 @@ public class JsonDiff implements Comparable<JsonDiff> {
 	 * 
 	 * @return
 	 */
-	public JsonDiff addJsonBorder() {
-		if (diff.length() > 0) {
-			diff.insert(0, "{").append("}");
-		}
-		return this;
-	}
+	/*
+	 * public JsonDiff addJsonBorder() { if (diff.length() > 0) { diff.insert(0,
+	 * "{").append("}"); } return this; }
+	 */
 
 	/**
 	 * encapsulate diff in <b>[]</b>, => [diff], if the length of diff is > 0
 	 * 
 	 * @return
 	 */
-	public JsonDiff addArrayBorder() {
-		if (diff.length() > 0) {
-			diff.insert(0, "[").append("]");
-		}
-		return this;
-	}
+	/*
+	 * public JsonDiff addArrayBorder() { if (diff.length() > 0) {
+	 * diff.insert(0, "[").append("]"); } return this; }
+	 */
 
 	/**
 	 * add <b>NodeName:</b> @ the begin of diff, if the length of diff is > 0
@@ -82,12 +94,11 @@ public class JsonDiff implements Comparable<JsonDiff> {
 	 * @return
 	 * @throws IOException
 	 */
-	public JsonDiff setNodeName(String rootName) throws IOException {
-		if (diff.length() > 0) {
-			diff.insert(0, writeJsonField(rootName) + ":");//parent level, and grand parent 
-		}
-		return this;
-	}
+	/*
+	 * public JsonDiff setNodeName(String rootName) throws IOException { if
+	 * (diff.length() > 0) { diff.insert(0, writeJsonField(rootName) +
+	 * ":");//parent level, and grand parent } return this; }
+	 */
 
 	/**
 	 * 
@@ -105,8 +116,8 @@ public class JsonDiff implements Comparable<JsonDiff> {
 	 * 
 	 * @return
 	 */
-	public static JsonDiff init() {
-		return new JsonDiff(new StringBuilder(""), 0, 0);
+	public static JsonDiff init(JsonNode diffNode) {
+		return new JsonDiff(diffNode, 0, 0/*, new HashSet<String>()*/);
 	}
 
 	/**
@@ -116,12 +127,12 @@ public class JsonDiff implements Comparable<JsonDiff> {
 	 * 
 	 * @return
 	 */
-	public static JsonDiff noDiff() {
-		return new JsonDiff(new StringBuilder(""), 0, 1);
+	public static JsonDiff noDiff(JsonNode node) {
+		return new JsonDiff(node, 0, 1/*, new HashSet<String>()*/);
 	}
 
-	public static JsonDiff inDiff() {
-		return new JsonDiff(new StringBuilder(""), 0, 0);
+	public static JsonDiff neutralDiff(JsonNode node) {
+		return new JsonDiff(node, 0, 0/*, new HashSet<String>()*/);
 	}
 
 	/**
@@ -131,8 +142,9 @@ public class JsonDiff implements Comparable<JsonDiff> {
 	 * 
 	 * @return
 	 */
-	public static JsonDiff diff(String diff) {
-		return new JsonDiff(new StringBuilder(diff), 1, 0);
+	public static JsonDiff diff(String actual, String expected, ObjectNode objectNode) {
+		createJson(nodeCompare, new String[] { actual, expected }, objectNode);
+		return new JsonDiff(objectNode, 1, 0/*, new HashSet<String>()*/);
 	}
 
 	/**
@@ -147,15 +159,13 @@ public class JsonDiff implements Comparable<JsonDiff> {
 	/**
 	 * if length > 0 add "<b>,</b>" at the end of string
 	 */
-	@JsonIgnore
-	private Consumer<StringBuilder> stringAppender = (sb) -> {
-		if (sb.length() > 0) {
-			sb.append(",");
-		}
-	};
+	/*
+	 * @JsonIgnore private Consumer<StringBuilder> stringAppender = (sb) -> { if
+	 * (sb.length() > 0) { sb.append(","); } };
+	 */
 
 	public String toString() {
-		return "diff: '" + this.diff + "', equalCounter: '" + this.equalCounter + "', diffCounter: '" + this.diffCounter + "'";
+		return "diff: '"/* + this.diff */ + "', equalCounter: '" + this.equalCounter + "', diffCounter: '" + this.diffCounter + "'";
 	}
 
 	@Override

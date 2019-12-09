@@ -15,6 +15,8 @@ import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.databind.node.TextNode;
 
 public class CompareUtils {
 	private static final String										CLAIM_ETERNAL_REF	= "(EA\\d+/\\d+)" + "|" + "(C\\d+/\\d+)" + "|" + "(ECLAIM\\d+/\\d+)";
@@ -108,38 +110,41 @@ public class CompareUtils {
 	 * @return
 	 * @throws IOException
 	 */
-	public static String writeAsJson(/* String rootName, */ String[] keys, String[] values) throws IOException {
-		ByteArrayOutputStream stream = new ByteArrayOutputStream();
-		JsonFactory jfactory = new JsonFactory();
-		JsonGenerator jGenerator = jfactory.createGenerator(stream, JsonEncoding.UTF8);
-		jGenerator.writeStartObject();
+	/*
+	 * public static String writeAsJson(String[] keys, String[] values) throws
+	 * IOException { ByteArrayOutputStream stream = new ByteArrayOutputStream();
+	 * JsonFactory jfactory = new JsonFactory(); JsonGenerator jGenerator =
+	 * jfactory.createGenerator(stream, JsonEncoding.UTF8);
+	 * jGenerator.writeStartObject(); for (int i = 0; i < keys.length; i++) {
+	 * jGenerator.writeStringField(keys[i], values[i]); }
+	 * jGenerator.writeEndObject(); jGenerator.close();
+	 * 
+	 * String json = new String(stream.toByteArray(), "UTF-8"); return json; }
+	 */
+
+	public static void createJson(String[] keys, String[] values, ObjectNode objectNode) {
 		for (int i = 0; i < keys.length; i++) {
-			jGenerator.writeStringField(keys[i], values[i]);
+			objectNode.set(keys[i], writeStringField(values[i]));
 		}
-		jGenerator.writeEndObject();
-		jGenerator.close();
-
-		String json = new String(stream.toByteArray(), "UTF-8");
-		/*
-		 * if (StringUtils.isEmpty(rootName)) { return json; } else { return
-		 * "\"" + rootName + "\":" + json; }
-		 */
-		return json;
 	}
 
-	public static String writeJsonField(String field) throws IOException {
-		ByteArrayOutputStream stream = new ByteArrayOutputStream();
-		JsonFactory jfactory = new JsonFactory();
-		JsonGenerator jGenerator = jfactory.createGenerator(stream, JsonEncoding.UTF8);
-		jGenerator.writeString(field);
-		jGenerator.close();
-		String json = new String(stream.toByteArray(), "UTF-8");
-		/*
-		 * if (StringUtils.isEmpty(rootName)) { return json; } else { return
-		 * "\"" + rootName + "\":" + json; }
-		 */
-		return json;
+	public static TextNode writeStringField(String value) {
+		return new TextNode(value);
 	}
+
+	/*
+	 * public static String writeJsonField(String field) throws IOException {
+	 * ByteArrayOutputStream stream = new ByteArrayOutputStream(); JsonFactory
+	 * jfactory = new JsonFactory(); JsonGenerator jGenerator =
+	 * jfactory.createGenerator(stream, JsonEncoding.UTF8);
+	 * jGenerator.writeString(field); jGenerator.close(); String json = new
+	 * String(stream.toByteArray(), "UTF-8");
+	 * 
+	 * if (StringUtils.isEmpty(rootName)) { return json; } else { return "\"" +
+	 * rootName + "\":" + json; }
+	 * 
+	 * return json; }
+	 */
 
 	public static String jsonBeautify(String jsonStr, ObjectMapper mapperIndent) throws JsonParseException, IOException {
 		if (!jsonStr.equals("")) {
@@ -150,7 +155,7 @@ public class CompareUtils {
 		}
 		return jsonStr;
 	}
-	
+
 	public static JsonNode getIgnoreCase(String nodeName, JsonNode jsonNode) {
 		JsonNode result = jsonNode.get(nodeName);
 		if (result == null) {
