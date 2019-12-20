@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.Iterator;
+import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 
@@ -60,20 +61,25 @@ public class CompareUtils {
 				equal = true;
 			}
 		} else if (checkType.test(actual.isTextual(), expected.isTextual())) {
-			String[] a = cleanNode(actual, caseSensitive, dertyClean, regex, dictionary);
-			String[] e = cleanNode(expected, caseSensitive, dertyClean, regex, dictionary);
-			equal = Arrays.equals(a, e);
-
+			String actualA = actual.textValue();
+			String actualE = expected.textValue();
+			if (breakOnNullValue && (actualA == null && actualE != null || actualA != null && actualE == null)) {
+				equal = false;
+			} else {
+				String[] a = cleanNode(Optional.ofNullable(actualA).orElse(""), caseSensitive, dertyClean, regex, dictionary);
+				String[] e = cleanNode(Optional.ofNullable(actualE).orElse(""), caseSensitive, dertyClean, regex, dictionary);
+				equal = Arrays.equals(a, e);
+			}
 		} else {//default equal
-			String[] a = cleanNode(actual, caseSensitive, dertyClean, regex, dictionary);
-			String[] e = cleanNode(expected, caseSensitive, dertyClean, regex, dictionary);
+			String[] a = cleanNode(actual.asText(), caseSensitive, dertyClean, regex, dictionary);
+			String[] e = cleanNode(expected.asText(), caseSensitive, dertyClean, regex, dictionary);
 			equal = Arrays.equals(a, e);
 		}
 		return equal;
 	}
 
-	public static String[] cleanNode(JsonNode n, boolean caseSensitive, String[] dertyClean, String regex, String[] dictionary) {
-		String in = n.asText().trim();
+	public static String[] cleanNode(String value/* JsonNode n */, boolean caseSensitive, String[] dertyClean, String regex, String[] dictionary) {
+		String in = value;//n.asText().trim();
 		String[] out = null;
 
 		if (in.equals("0") || in.equals("0.0")) {//@Now Zero is same as empty string
@@ -86,7 +92,7 @@ public class CompareUtils {
 				in = Arrays.asList(dictionary).stream().filter(p -> in2.contains(p)).findFirst().get();//ret.substring(0,  ret.indexOf("Unable to Load Conditions"));//moreDetails, alertMessage, "T78.40XA" != "W57.XXXA" => skip comparison, both not found
 			}
 		}
-		
+
 		if (regex != null) {
 			in = in.replaceAll(regex, "CLAIM_ETERNAL_REF");
 		}

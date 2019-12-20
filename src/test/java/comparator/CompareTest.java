@@ -107,13 +107,13 @@ public class CompareTest {
 		String input2 = "\"Per Member Per Master Contract Limit of 1,000,000. AED\"";
 		//System.out.println("1".substring(0, 1));
 		//System.out.println("231.2".toString());
-		String[] cleanNode = CompareUtils.cleanNode(new TextNode(input1), true, constraintsDirtyClean, "", null);
+		String[] cleanNode = CompareUtils.cleanNode((new TextNode(input1)).asText(), true, constraintsDirtyClean, "", null);
 		Optional<String> reduce = Arrays.asList(cleanNode).stream().reduce((a, b) -> {
 			return a + b;
 		});
 		System.out.println(reduce.get());
 
-		cleanNode = CompareUtils.cleanNode(new TextNode(input2), true, constraintsDirtyClean, "", null);
+		cleanNode = CompareUtils.cleanNode((new TextNode(input2)).asText(), true, constraintsDirtyClean, "", null);
 		reduce = Arrays.asList(cleanNode).stream().reduce((a, b) -> {
 			return a + b;
 		});

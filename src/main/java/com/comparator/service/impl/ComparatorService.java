@@ -160,7 +160,7 @@ public class ComparatorService implements IComparatorService {
 				return JsonDiff.diff(objectIsEmpty, String.format(objectFields, eFieldsItr.next()), mapperIndent.createObjectNode());//.setNodeName(rootName);
 			}
 		} else {
-			//Object Empty so set to JsonNull node, null or {}
+			// IF : Object is Empty => set to JsonNull node, null or {}
 			if (!aFieldsItr.hasNext() && rootLevelActual
 					.isObject() /*
 								 * && !rootLevelActual.isNull() &&
