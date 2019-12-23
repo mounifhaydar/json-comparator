@@ -130,15 +130,7 @@ public class ComparatorService implements IComparatorService {
 			} else {
 				rootLevelExpected = JsonNodeFactory.instance.nullNode();
 			}
-		} /*
-			 * else if (rootLevelActual.isNull() && rootLevelExpected.isNull())
-			 * {//null null return JsonDiff.noDiff(); } else if
-			 * ((rootLevelActual.isNull() || rootLevelExpected.isNull())) {//
-			 * not null null if (breakOnNullNode) return
-			 * JsonDiff.diff(writeAsJson(nodeCompare, new String[] {
-			 * rootLevelActual.toString(), rootLevelExpected.toString()
-			 * })).setNodeName(rootName);//last child }
-			 */
+		}
 
 		//input exist, so compare the items: KEY/VALUE
 
@@ -161,18 +153,10 @@ public class ComparatorService implements IComparatorService {
 			}
 		} else {
 			// IF : Object is Empty => set to JsonNull node, null or {}
-			if (!aFieldsItr.hasNext() && rootLevelActual
-					.isObject() /*
-								 * && !rootLevelActual.isNull() &&
-								 * !rootLevelActual.isArray()
-								 */) {
+			if (!aFieldsItr.hasNext() && rootLevelActual.isObject()) {
 				rootLevelActual = JsonNodeFactory.instance.nullNode();
 			}
-			if (!eFieldsItr.hasNext() && rootLevelExpected
-					.isObject() /*
-								 * && !rootLevelExpected.isNull() &&
-								 * !rootLevelExpected.isArray()
-								 */) {
+			if (!eFieldsItr.hasNext() && rootLevelExpected.isObject()) {
 				rootLevelExpected = JsonNodeFactory.instance.nullNode();
 			}
 		}
@@ -410,7 +394,7 @@ public class ComparatorService implements IComparatorService {
 	 */
 
 	private List<JsonNode> getItemById(List<JsonNode> list, String[] keys, JsonNode item, int allowedDiffPrecision, boolean caseSensitiveValue, boolean breakOnNullNode, boolean breakOnNullValue, String[] dertyClean,
-			String regex , String[] dictionary) throws IOException {
+			String regex, String[] dictionary) throws IOException {
 		List<JsonNode> matches = new ArrayList<>();
 		for (JsonNode s : list) {
 			//filter on key

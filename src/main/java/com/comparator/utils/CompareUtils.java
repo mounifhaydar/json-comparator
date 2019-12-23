@@ -43,6 +43,8 @@ public class CompareUtils {
 		BiPredicate<Boolean, Boolean> checkType = (a, e) -> a && e || (!breakOnNullValue) && (a || e);
 		if (actual.isNull() && expected.isNull()) {
 			return true;
+		} else if (breakOnNullValue && (actual.isNull() || expected.isNull())) {
+			return false;
 		} else if (checkType.test(actual.isNumber(), expected.isNumber())) {
 			double a = actual.asDouble();
 			double e = expected.asDouble();
@@ -61,20 +63,17 @@ public class CompareUtils {
 				equal = true;
 			}
 		} else if (checkType.test(actual.isTextual(), expected.isTextual())) {
-			String actualA = actual.textValue();
-			String actualE = expected.textValue();
-			if (breakOnNullValue && (actualA == null && actualE != null || actualA != null && actualE == null)) {
-				equal = false;
-			} else {
-				String[] a = cleanNode(Optional.ofNullable(actualA).orElse(""), caseSensitive, dertyClean, regex, dictionary);
-				String[] e = cleanNode(Optional.ofNullable(actualE).orElse(""), caseSensitive, dertyClean, regex, dictionary);
-				equal = Arrays.equals(a, e);
-			}
+			String actualA = Optional.ofNullable(actual.textValue()).orElse("");
+			String actualE = Optional.ofNullable(expected.textValue()).orElse("");
+			String[] a = cleanNode(actualA, caseSensitive, dertyClean, regex, dictionary);
+			String[] e = cleanNode(actualE, caseSensitive, dertyClean, regex, dictionary);
+			equal = Arrays.equals(a, e);
 		} else {//default equal
 			String[] a = cleanNode(actual.asText(), caseSensitive, dertyClean, regex, dictionary);
 			String[] e = cleanNode(expected.asText(), caseSensitive, dertyClean, regex, dictionary);
 			equal = Arrays.equals(a, e);
 		}
+
 		return equal;
 	}
 
