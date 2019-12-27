@@ -102,7 +102,7 @@ public class CompareUtils {
 			}
 		}
 
-		out = (caseSensitive ? in : in.toLowerCase()).split(",");
+		out = (caseSensitive ? in : in.toLowerCase()).split(",");//TODO ADD SPLITER[] IN INPUT PARAM, THEN FOR EACH SPLIT AND COLLECT
 		Arrays.sort(out);
 		return out;
 	}
