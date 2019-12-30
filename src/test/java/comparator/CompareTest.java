@@ -1,13 +1,9 @@
 package comparator;
 
-import java.io.IOException;
 import java.io.UnsupportedEncodingException;
-import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -15,9 +11,9 @@ import java.util.Map.Entry;
 import java.util.Optional;
 
 import org.junit.Test;
-import org.springframework.util.comparator.Comparators;
 
 import com.comparator.model.JsonDiff;
+import com.comparator.model.Regex;
 import com.comparator.utils.CompareUtils;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
@@ -101,24 +97,30 @@ public class CompareTest {
 	public void replace() {
 
 		String[] constraintsDirtyClean = { "?", "'", "\u2019", "'", "&quot;", "'", "&apos;", "'", "null", "", ".0", "", "may represent a duplication in therapy", "may represent duplicate therapy", "#", "", "0.0", "",
-				" ", "", ",", "", ".", "" };
+				" ", "", ",", "", /*".",*/ "" };
 
+		Map<String, String> singletonMap = Collections.singletonMap("(\\d+)\\. ", "$1");
+		
+		Regex reg = new Regex(singletonMap);
 		String input1 = "\"Per Member Per Master Contract Limit of 1,000,000 AED\"";
 		String input2 = "\"Per Member Per Master Contract Limit of 1,000,000. AED\"";
 		//System.out.println("1".substring(0, 1));
 		//System.out.println("231.2".toString());
-		String[] cleanNode = CompareUtils.cleanNode((new TextNode(input1)).asText(), true, constraintsDirtyClean, "", null);
+		
+		String[] cleanNode = CompareUtils.cleanNode((new TextNode(input1)).asText(), true, constraintsDirtyClean, singletonMap, null);
 		Optional<String> reduce = Arrays.asList(cleanNode).stream().reduce((a, b) -> {
 			return a + b;
 		});
 		System.out.println(reduce.get());
 
-		cleanNode = CompareUtils.cleanNode((new TextNode(input2)).asText(), true, constraintsDirtyClean, "", null);
+		cleanNode = CompareUtils.cleanNode((new TextNode(input2)).asText(), true, constraintsDirtyClean, singletonMap, null);
 		reduce = Arrays.asList(cleanNode).stream().reduce((a, b) -> {
 			return a + b;
 		});
 		System.out.println(reduce.get());
 
-		System.out.println(CompareUtils.isEqual("", new TextNode(input1), new TextNode(input2), false, false, 6, true, constraintsDirtyClean, "", null));
+		
+		System.out.println(CompareUtils.isEqual("", new TextNode(input1), new TextNode(input2), false, false, 6, true, constraintsDirtyClean,
+				singletonMap, null));
 	}
 }

@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.Iterator;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
@@ -35,7 +37,7 @@ public class CompareUtils {
 	//private static double											allowedDiffPrecision		= 0.01;
 
 	public static boolean isEqual(String rootName, JsonNode actual, JsonNode expected, boolean breakOnNullNode, boolean breakOnNullValue, int allowedDiffPrecision, boolean caseSensitive, String[] dertyClean,
-			String regex, String[] dictionary) {
+			Map<String, String> regex, String[] dictionary) {
 		boolean equal = false;
 		//actual = actual == null ? JsonNodeFactory.instance.nullNode() : actual;
 		//expected = expected == null ? JsonNodeFactory.instance.nullNode() : expected;
@@ -77,13 +79,14 @@ public class CompareUtils {
 		return equal;
 	}
 
-	public static String[] cleanNode(String value/* JsonNode n */, boolean caseSensitive, String[] dertyClean, String regex, String[] dictionary) {
+	public static String[] cleanNode(String value/* JsonNode n */, boolean caseSensitive, String[] dertyClean, Map<String, String> regex, String[] dictionary) {
 		String in = value;//n.asText().trim();
 		String[] out = null;
 
-		if (in.equals("0") || in.equals("0.0")) {//@Now Zero is same as empty string
-			in = "";
-		}
+		/*
+		 * if (in.equals("0") || in.equals("0.0")) {//@Now Zero is same as empty
+		 * string in = ""; }
+		 */
 
 		if (dictionary != null) {
 			String in2 = in;
@@ -93,7 +96,9 @@ public class CompareUtils {
 		}
 
 		if (regex != null) {
-			in = in.replaceAll(regex, "CLAIM_ETERNAL_REF");
+			for (Entry<String, String> e : regex.entrySet()) {
+				in = in.replaceAll(e.getKey(), e.getValue());
+			}
 		}
 
 		if (dertyClean != null) {

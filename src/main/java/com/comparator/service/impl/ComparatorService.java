@@ -12,6 +12,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.apache.commons.collections4.IteratorUtils;
@@ -100,7 +101,7 @@ public class ComparatorService implements IComparatorService {
 		Keys keys = compare.getKeys();
 		int allowedDiffPrecision = compare.getPrecisions().allowedDiff(path, nodeSensitiveName);
 		String[] itemCleaner = compare.getDirtyCleans().itemCleaner(path, nodeSensitiveName);
-		String regex = compare.getRegexs().itemRegex(path, nodeSensitiveName);
+		Map<String, String> regex = compare.getRegexs().itemRegex(path, nodeSensitiveName);
 		String[] dictionary = compare.getDictionaries().getDictionary(path, nodeSensitiveName);
 
 		SelectedNodes selectedNodes = compare.getSelectedNodes();
@@ -394,7 +395,7 @@ public class ComparatorService implements IComparatorService {
 	 */
 
 	private List<JsonNode> getItemById(List<JsonNode> list, String[] keys, JsonNode item, int allowedDiffPrecision, boolean caseSensitiveValue, boolean breakOnNullNode, boolean breakOnNullValue, String[] dertyClean,
-			String regex, String[] dictionary) throws IOException {
+			Map<String, String> regex, String[] dictionary) throws IOException {
 		List<JsonNode> matches = new ArrayList<>();
 		for (JsonNode s : list) {
 			//filter on key
