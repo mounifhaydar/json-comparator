@@ -88,6 +88,7 @@ public class CompareUtils {
 		 * string in = ""; }
 		 */
 
+		//Priority 1: Dictionary
 		if (dictionary != null) {
 			String in2 = in;
 			if (Arrays.asList(dictionary).stream().filter(p -> in2.contains(p)).count() > 0l) {
@@ -95,12 +96,14 @@ public class CompareUtils {
 			}
 		}
 
+		//Priority 2: RegEx
 		if (regex != null) {
 			for (Entry<String, String> e : regex.entrySet()) {
 				in = in.replaceAll(e.getKey(), e.getValue());
 			}
 		}
 
+		//Priority 3: Dirty
 		if (dertyClean != null) {
 			for (int i = 0; i < dertyClean.length; i += 1) {
 				in = in.replace(dertyClean[i], "");
