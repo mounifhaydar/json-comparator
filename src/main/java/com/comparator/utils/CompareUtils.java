@@ -37,17 +37,15 @@ public class CompareUtils {
 	//private static double											allowedDiffPrecision		= 0.01;
 
 	public static boolean isEqual(String rootName, JsonNode actual, JsonNode expected, boolean breakOnNullNode, boolean breakOnNullValue, int allowedDiffPrecision, boolean caseSensitive, String[] dertyClean,
-			Map<String, String> regex, String[] dictionary) {
+			Map<String, String> regex, String[] dictionary, boolean breakOnTypeMismatch) {
 		boolean equal = false;
-		//actual = actual == null ? JsonNodeFactory.instance.nullNode() : actual;
-		//expected = expected == null ? JsonNodeFactory.instance.nullNode() : expected;
-
 		BiPredicate<Boolean, Boolean> checkType = (a, e) -> a && e || (!breakOnNullValue) && (a || e);
+
 		if (actual.isNull() && expected.isNull()) {
 			return true;
 		} else if (breakOnNullValue && (actual.isNull() || expected.isNull())) {
 			return false;
-		} else if (checkType.test(actual.isNumber(), expected.isNumber())) {
+		} else if (checkType.test(actual.isNumber(), expected.isNumber()) || !breakOnTypeMismatch && relatedType(actual, expected, Number.class)) {
 			double a = actual.asDouble();
 			double e = expected.asDouble();
 
@@ -113,6 +111,32 @@ public class CompareUtils {
 		out = (caseSensitive ? in : in.toLowerCase()).split(",");//TODO ADD SPLITER[] IN INPUT PARAM, THEN FOR EACH SPLIT AND COLLECT
 		Arrays.sort(out);
 		return out;
+	}
+
+	public static <T> boolean relatedType(JsonNode actual, JsonNode expected, Class<T> t) {
+		boolean aResult = false;
+		boolean bResult = false;
+		if (t == Number.class) {
+			try {
+				Double.parseDouble(actual.textValue());
+				aResult = true;
+			} catch (NullPointerException ex) {
+
+			} catch (NumberFormatException ex) {
+
+			}
+
+			try {
+				Double.parseDouble(expected.textValue());
+				bResult = true;
+			} catch (NullPointerException ex) {
+
+			} catch (NumberFormatException ex) {
+
+			}
+			
+		}
+		return aResult || bResult;
 	}
 
 	/**

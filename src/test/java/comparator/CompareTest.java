@@ -160,6 +160,6 @@ public class CompareTest {
 		});
 		System.out.println(reduce.get());
 
-		System.out.println(CompareUtils.isEqual("", new TextNode(input1), new TextNode(input2), false, false, 6, true, constraintsDirtyClean, constraintsTOB2ConditionDescRegex, null));
+		System.out.println(CompareUtils.isEqual("", new TextNode(input1), new TextNode(input2), false, false, 6, true, constraintsDirtyClean, constraintsTOB2ConditionDescRegex, null,false));
 	}
 }

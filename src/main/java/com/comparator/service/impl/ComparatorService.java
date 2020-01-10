@@ -98,6 +98,7 @@ public class ComparatorService implements IComparatorService {
 
 		boolean nodeSensitiveName = compare.isNodeSensitiveName();
 		boolean caseSensitiveValue = compare.isCaseSensitiveValue();
+		boolean breakOnTypeMismatch = compare.isBreakOnTypeMismatch();
 		Keys keys = compare.getKeys();
 		int allowedDiffPrecision = compare.getPrecisions().allowedDiff(path, nodeSensitiveName);
 		String[] itemCleaner = compare.getDirtyCleans().itemCleaner(path, nodeSensitiveName);
@@ -360,7 +361,7 @@ public class ComparatorService implements IComparatorService {
 				 * if (primaryNodes.isSkip(new NodeInfo(parentRootName,
 				 * rootName))) { equal = true; } else {
 				 */
-				equal = isEqual(rootName, rootLevelActual, rootLevelExpected, breakOnNullNode, breakOnNullValue, allowedDiffPrecision, caseSensitiveValue, itemCleaner, regex, dictionary);
+				equal = isEqual(rootName, rootLevelActual, rootLevelExpected, breakOnNullNode, breakOnNullValue, allowedDiffPrecision, caseSensitiveValue, itemCleaner, regex, dictionary,breakOnTypeMismatch);
 				/* } */
 
 				if (equal) {
@@ -395,12 +396,12 @@ public class ComparatorService implements IComparatorService {
 	 */
 
 	private List<JsonNode> getItemById(List<JsonNode> list, String[] keys, JsonNode item, int allowedDiffPrecision, boolean caseSensitiveValue, boolean breakOnNullNode, boolean breakOnNullValue, String[] dertyClean,
-			Map<String, String> regex, String[] dictionary) throws IOException {
+			Map<String, String> regex, String[] dictionary, boolean breakOnTypeMismatch) throws IOException {
 		List<JsonNode> matches = new ArrayList<>();
 		for (JsonNode s : list) {
 			//filter on key
 			for (int whereI = 0; whereI < keys.length; whereI++) {
-				if (!isEqual("", item.get(keys[whereI]), s.get(keys[whereI]), breakOnNullNode, breakOnNullValue, allowedDiffPrecision, caseSensitiveValue, dertyClean, regex, dictionary)) {
+				if (!isEqual("", item.get(keys[whereI]), s.get(keys[whereI]), breakOnNullNode, breakOnNullValue, allowedDiffPrecision, caseSensitiveValue, dertyClean, regex, dictionary,breakOnTypeMismatch)) {
 					continue;
 				}
 			}

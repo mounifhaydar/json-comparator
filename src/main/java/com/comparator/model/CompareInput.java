@@ -20,6 +20,7 @@ public class CompareInput {
 	private Dictionaries	dictionaries	= new Dictionaries();
 	boolean					nodeSensitiveName;
 	boolean					caseSensitiveValue;
+	boolean					breakOnTypeMismatch;
 	private Precisions		precisions		= new Precisions();
 	private DirtyCleans		dirtyCleans		= new DirtyCleans();
 
