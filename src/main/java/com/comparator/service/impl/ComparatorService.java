@@ -59,7 +59,7 @@ public class ComparatorService implements IComparatorService {
 		compare.setExpected(null);
 
 		long startTime = System.currentTimeMillis();
-		diff = checkDiff(compare, actual, expected, "", "root", "root", false, false, false);//.addJsonBorder();
+		diff = checkDiff(compare, actual, expected, "", "", "", false, false, false);//.addJsonBorder();
 		//diff.setDiff(new StringBuilder(jsonBeautify(diff.diff.toString(), mapperIndent)));
 
 		LOGGER.info("execution time:" + ((System.currentTimeMillis() - startTime) / 1000) + " (seconds)");
@@ -191,7 +191,7 @@ public class ComparatorService implements IComparatorService {
 			JsonDiff output = JsonDiff.init(mapperIndent.createObjectNode());
 			while (allFieldsItr.hasNext()) {
 				String parentName = allFieldsItr.next();
-				String nodePath = path + "." + parentName;
+				String nodePath = (path == "" ? "" : path + ".") + parentName;
 				JsonNode parentActual = isActualNull ? null : getJsonNode(parentName, rootLevelActual, nodeSensitiveName);
 				JsonNode parentExpect = isExpectedNull ? null : getJsonNode(parentName, rootLevelExpected, nodeSensitiveName);
 				JsonDiff tmpDiff = checkDiff(compare, parentActual, parentExpect, rootName, parentName, nodePath, breakOnNullNode, breakOnNullValue, false);
@@ -301,7 +301,7 @@ public class ComparatorService implements IComparatorService {
 						 * expectedAsListCopy) + "]").addJsonBorder());
 						 */
 
-						output.appendNodeDiff(rootName + ".Item[" + generateItemName(compare, path, keys, itemE, expectedAsListCopy) + "]",
+						output.appendNodeDiff((rootName == "" ? "" : rootName + ".") + "Item[" + generateItemName(compare, path, keys, itemE, expectedAsListCopy) + "]",
 								JsonDiff.diff(noUniqueItem, itemFoundKey, mapperIndent.createObjectNode(), path), mapperIndent);
 
 						for (JsonNode aTb : sA) {
@@ -316,12 +316,12 @@ public class ComparatorService implements IComparatorService {
 							} else {
 								//tmpDiff.addJsonBorder().setNodeName();
 								//tmpDiff.addJsonBorder();
-								output.appendNodeDiff(rootName + ".Item[" + generateItemName(compare, path, keys, itemE, expectedAsListCopy) + "]", tmpDiff, mapperIndent);
+								output.appendNodeDiff((rootName == "" ? "" : rootName + ".") + "Item[" + generateItemName(compare, path, keys, itemE, expectedAsListCopy) + "]", tmpDiff, mapperIndent);
 							}
 							actualAsList.remove(itemA);
 						} else {//size 0
 							String itemFoundKey = generateItemKeyStr(keys.getNodeInfo(path, nodeSensitiveName), itemE);
-							output.appendNodeDiff(rootName + ".Item[" + generateItemName(compare, path, keys, itemE, expectedAsListCopy) + "]",
+							output.appendNodeDiff((rootName == "" ? "" : rootName + ".") + "Item[" + generateItemName(compare, path, keys, itemE, expectedAsListCopy) + "]",
 									JsonDiff.diff(itemNotFound, itemFoundKey, mapperIndent.createObjectNode(), path), mapperIndent);
 						}
 					}
@@ -335,10 +335,10 @@ public class ComparatorService implements IComparatorService {
 						//check if key duplicated is the list itself
 						duplicatedKey = getItemCorrelation(compare, actualAsList, n, 1, parentRootName, rootName, path, breakOnNullNode, breakOnNullValue).size() > 1;
 						if (denyDuplication && duplicatedKey) {
-							output.appendNodeDiff(rootName + ".Item[" + generateItemName(compare, path, keys, n, actualAsListCopy) + "]", JsonDiff.diff(noUniqueItem, itemFoundKey, mapperIndent.createObjectNode(), path),
+							output.appendNodeDiff((rootName == "" ? "" : rootName + ".") + "Item[" + generateItemName(compare, path, keys, n, actualAsListCopy) + "]", JsonDiff.diff(noUniqueItem, itemFoundKey, mapperIndent.createObjectNode(), path),
 									mapperIndent);
 						} else {
-							output.appendNodeDiff(rootName + ".Item[" + generateItemName(compare, path, keys, n, actualAsListCopy) + "]", JsonDiff.diff(itemFoundKey, itemNotFound, mapperIndent.createObjectNode(), path),
+							output.appendNodeDiff((rootName == "" ? "" : rootName + ".") + "Item[" + generateItemName(compare, path, keys, n, actualAsListCopy) + "]", JsonDiff.diff(itemFoundKey, itemNotFound, mapperIndent.createObjectNode(), path),
 									mapperIndent);
 						}
 					}
