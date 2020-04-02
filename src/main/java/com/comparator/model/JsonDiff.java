@@ -3,6 +3,7 @@ package com.comparator.model;
 //import static com.comparator.utils.CompareUtils.writeJsonField;
 import static com.comparator.utils.CompareUtils.createJson;
 
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashSet;
 
@@ -25,16 +26,14 @@ import lombok.Setter;
 @RequiredArgsConstructor
 public class JsonDiff implements Comparable<JsonDiff> {
 
-	//@NonNull
-	//public StringBuilder	diff;
 	@NonNull
 	public JsonNode					diffNode;											//{}
 	@NonNull
 	public Integer					diffCounter;
 	@NonNull
 	public Integer					equalCounter;
-	//@NonNull
-	//HashSet<String>					fieldsSet;
+	@NonNull
+	private HashSet<String>					diffSet;
 
 	private static final String[]	nodeCompare	= new String[] { "actual", "expected" };
 
@@ -55,7 +54,7 @@ public class JsonDiff implements Comparable<JsonDiff> {
 		}
 		diffCounter += diff.diffCounter;
 		equalCounter += diff.equalCounter;
-		//fieldsSet.addAll(diff.fieldsSet);
+		diffSet.addAll(diff.diffSet);
 	}
 
 	/**
@@ -117,7 +116,7 @@ public class JsonDiff implements Comparable<JsonDiff> {
 	 * @return
 	 */
 	public static JsonDiff init(JsonNode diffNode) {
-		return new JsonDiff(diffNode, 0, 0/*, new HashSet<String>()*/);
+		return new JsonDiff(diffNode, 0, 0, new HashSet<String>());
 	}
 
 	/**
@@ -128,11 +127,11 @@ public class JsonDiff implements Comparable<JsonDiff> {
 	 * @return
 	 */
 	public static JsonDiff noDiff(JsonNode node) {
-		return new JsonDiff(node, 0, 1/*, new HashSet<String>()*/);
+		return new JsonDiff(node, 0, 1, new HashSet<String>());
 	}
 
 	public static JsonDiff neutralDiff(JsonNode node) {
-		return new JsonDiff(node, 0, 0/*, new HashSet<String>()*/);
+		return new JsonDiff(node, 0, 0, new HashSet<String>());
 	}
 
 	/**
@@ -142,9 +141,9 @@ public class JsonDiff implements Comparable<JsonDiff> {
 	 * 
 	 * @return
 	 */
-	public static JsonDiff diff(String actual, String expected, ObjectNode objectNode) {
+	public static JsonDiff diff(String actual, String expected, ObjectNode objectNode, String path) {
 		createJson(nodeCompare, new String[] { actual, expected }, objectNode);
-		return new JsonDiff(objectNode, 1, 0/*, new HashSet<String>()*/);
+		return new JsonDiff(objectNode, 1, 0, new HashSet<String>(Arrays.asList(path)));
 	}
 
 	/**
