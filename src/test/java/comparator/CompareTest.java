@@ -13,6 +13,7 @@ import java.util.stream.Stream;
 import java.util.Optional;
 
 import org.junit.Test;
+import org.springframework.expression.spel.ast.BooleanLiteral;
 
 import com.comparator.model.JsonDiff;
 import com.comparator.model.Regex;
@@ -49,8 +50,8 @@ public class CompareTest {
 	public void testOrder() {
 		List<JsonDiff> l1 = new ArrayList<JsonDiff>();
 
-		l1.add(new JsonDiff(null, 7, 2));
-		l1.add(new JsonDiff(null, 6, 1));
+		l1.add(new JsonDiff(null, 7, 2, null));
+		l1.add(new JsonDiff(null, 6, 1, null));
 
 		//l1.sort(c);
 		//Collections.sort((List<T>) l1);
@@ -96,59 +97,66 @@ public class CompareTest {
 	}
 
 	@Test
+	public void comination() {
+
+		String input1 = "\"Item (10/Consultation Specialist) ICD9 crosswalks not available for ICD9 code(s)(646.81,646.82) and CPT Code Not Found.\"";
+		String input2 = "\"Item (10/Consultation Specialist) ICD9 crosswalks not available for ICD9 code(s)(646.82,646.81) and CPT Code Not Found.\"";
+
+		//String[] constraintsDirtyClean = { "may represent a duplication in therapy", "may represent duplicate therapy", "?", "'", "\u2019", "&quot;", "&apos;", "null", ".0%)", "%)", ".0 ", " 0 ", "#", " ", "." };
+		boolean isCombination = true;
+		String[] splitter = null;
+
+		System.out.println(CompareUtils.isEqual("", new TextNode(input1), new TextNode(input2), false, false, 6, true, null, null, null, false, isCombination, splitter));
+
+	}
+
+	//@Test
 	public void replace() {
 		String input1 = ".0 \"Billing:\\rDirect Billing\\rReimbursement: Elective(UCR 2 with penalty 100.0%) Emergency(UCR 2 with penalty 100.0%) \\rReimbursement customize for: \\r - Oman: Elective(UCR 2 with penalty 0.0%) Emergency(UCR 2 with penalty 0.0%)\"";
 		String input2 = "0 \"Billing:\\rDirect Billing\\rReimbursement: Elective(UCR 2 with penalty 100%) Emergency(UCR 2 with penalty 100%) \\rReimbursement customize for: \\r - Oman: Elective(UCR 2 with penalty 0%) Emergency(UCR 2 with penalty 0%) \"";
-		
-	
-		
 
-		
 		//String[] constraintsDirtyClean = { "may represent a duplication in therapy", "may represent duplicate therapy", "?", "'", "\u2019", "&quot;", "&apos;", "null", ".0%)", "%)", ".0 ", " 0 ", "#", " ", "." };
 		String[] constraintsDirtyClean = { "may represent a duplication in therapy", "may represent duplicate therapy", "?", "'", "\u2019", "&quot;", "&apos;",
 				"null"/* , ".0%)", "%)" , ".0 " , " 0 " */, /* ". ", */ "#", " ", "." };
 
 		Map<String, String> constraintsTOB2ConditionDescRegex = Stream.of(new String[][] { { "\\,(\\d+)", "$1" /*
-			 * "750,000"
-			 * =>
-			 * "750000"
-			 */ }, { "(\\d+)\\. ", "$1" }, /*
-											 * "1,000,000. "
-											 * =>
-											 * "1,000,000"
-											 */
-{ "(^|\\D+)(\\.0+)(\\D+|$)", "$10$3" }/* replace .0 by 0 */, { "(^|\\d)(\\.0*)(\\D+|$)", "$1$3" }/*
-				 * remove
-				 * trailing
-				 * zeros
-				 * after
-				 * dot:
-				 * 12
-				 * .
-				 * 00
-				 */, { "(\\.\\d*?[1-9])(0+)", "$1" }, /*
-														 * remove
-														 * trailing
-														 * zeros
-														 * after
-														 * number
-														 * 12
-														 * .
-														 * 0020
-														 * =>
-														 * 12
-														 * .
-														 * 002
-														 */
-{ "(^|\\D+)(\\.\\d+)", "$10$2" },/* replace DOT by 0.d */
-}).collect(Collectors.toMap(data -> data[0], data -> data[1]));
-		
+																												 * "750,000"
+																												 * =>
+																												 * "750000"
+																												 */ }, { "(\\d+)\\. ", "$1" }, /*
+																																				 * "1,000,000. "
+																																				 * =>
+																																				 * "1,000,000"
+																																				 */
+				{ "(^|\\D+)(\\.0+)(\\D+|$)", "$10$3" }/* replace .0 by 0 */, { "(^|\\d)(\\.0*)(\\D+|$)", "$1$3" }/*
+																													 * remove
+																													 * trailing
+																													 * zeros
+																													 * after
+																													 * dot:
+																													 * 12
+																													 * .
+																													 * 00
+																													 */, { "(\\.\\d*?[1-9])(0+)", "$1" }, /*
+																																							 * remove
+																																							 * trailing
+																																							 * zeros
+																																							 * after
+																																							 * number
+																																							 * 12
+																																							 * .
+																																							 * 0020
+																																							 * =>
+																																							 * 12
+																																							 * .
+																																							 * 002
+																																							 */
+				{ "(^|\\D+)(\\.\\d+)", "$10$2" },/* replace DOT by 0.d */
+		}).collect(Collectors.toMap(data -> data[0], data -> data[1]));
 
 		Regex reg = new Regex(constraintsTOB2ConditionDescRegex);
 
-		
-
-		String[] cleanNode = CompareUtils.cleanNode((new TextNode(input1)).asText(), true, constraintsDirtyClean, constraintsTOB2ConditionDescRegex, null);
+		String cleanNode = CompareUtils.cleanNode((new TextNode(input1)).asText(), true, constraintsDirtyClean, constraintsTOB2ConditionDescRegex, null);
 		Optional<String> reduce = Arrays.asList(cleanNode).stream().reduce((a, b) -> {
 			return a + b;
 		});
@@ -160,6 +168,6 @@ public class CompareTest {
 		});
 		System.out.println(reduce.get());
 
-		System.out.println(CompareUtils.isEqual("", new TextNode(input1), new TextNode(input2), false, false, 6, true, constraintsDirtyClean, constraintsTOB2ConditionDescRegex, null,false));
+		System.out.println(CompareUtils.isEqual("", new TextNode(input1), new TextNode(input2), false, false, 6, true, constraintsDirtyClean, constraintsTOB2ConditionDescRegex, null, false, true, new String[] { "," }));
 	}
 }

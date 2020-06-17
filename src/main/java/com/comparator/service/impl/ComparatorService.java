@@ -24,6 +24,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
+import com.comparator.model.Combinations;
 import com.comparator.model.CompareInput;
 import com.comparator.model.JsonDiff;
 import com.comparator.model.Key;
@@ -106,6 +107,9 @@ public class ComparatorService implements IComparatorService {
 		String[] dictionary = compare.getDictionaries().getDictionary(path, nodeSensitiveName);
 
 		SelectedNodes selectedNodes = compare.getSelectedNodes();
+
+		boolean isCombination = compare.getCombinations().isCombinatorics(path, nodeSensitiveName);
+		String[] combinationsRegex = compare.getCombinations().itemCombination(path, nodeSensitiveName);
 
 		//before start the compare check if the node is included in the result
 		if (selectedNodes.isSkip(path, nodeSensitiveName)) {
@@ -335,11 +339,11 @@ public class ComparatorService implements IComparatorService {
 						//check if key duplicated is the list itself
 						duplicatedKey = getItemCorrelation(compare, actualAsList, n, 1, parentRootName, rootName, path, breakOnNullNode, breakOnNullValue).size() > 1;
 						if (denyDuplication && duplicatedKey) {
-							output.appendNodeDiff((rootName == "" ? "" : rootName + ".") + "Item[" + generateItemName(compare, path, keys, n, actualAsListCopy) + "]", JsonDiff.diff(noUniqueItem, itemFoundKey, mapperIndent.createObjectNode(), path),
-									mapperIndent);
+							output.appendNodeDiff((rootName == "" ? "" : rootName + ".") + "Item[" + generateItemName(compare, path, keys, n, actualAsListCopy) + "]",
+									JsonDiff.diff(noUniqueItem, itemFoundKey, mapperIndent.createObjectNode(), path), mapperIndent);
 						} else {
-							output.appendNodeDiff((rootName == "" ? "" : rootName + ".") + "Item[" + generateItemName(compare, path, keys, n, actualAsListCopy) + "]", JsonDiff.diff(itemFoundKey, itemNotFound, mapperIndent.createObjectNode(), path),
-									mapperIndent);
+							output.appendNodeDiff((rootName == "" ? "" : rootName + ".") + "Item[" + generateItemName(compare, path, keys, n, actualAsListCopy) + "]",
+									JsonDiff.diff(itemFoundKey, itemNotFound, mapperIndent.createObjectNode(), path), mapperIndent);
 						}
 					}
 				}
@@ -358,7 +362,8 @@ public class ComparatorService implements IComparatorService {
 				 * if (primaryNodes.isSkip(new NodeInfo(parentRootName,
 				 * rootName))) { equal = true; } else {
 				 */
-				equal = isEqual(rootName, rootLevelActual, rootLevelExpected, breakOnNullNode, breakOnNullValue, allowedDiffPrecision, caseSensitiveValue, itemCleaner, regex, dictionary, breakOnTypeMismatch);
+				equal = isEqual(rootName, rootLevelActual, rootLevelExpected, breakOnNullNode, breakOnNullValue, allowedDiffPrecision, caseSensitiveValue, itemCleaner, regex, dictionary, breakOnTypeMismatch,
+						isCombination, combinationsRegex);
 				/* } */
 
 				if (equal) {
@@ -393,12 +398,13 @@ public class ComparatorService implements IComparatorService {
 	 */
 
 	private List<JsonNode> getItemById(List<JsonNode> list, String[] keys, JsonNode item, int allowedDiffPrecision, boolean caseSensitiveValue, boolean breakOnNullNode, boolean breakOnNullValue, String[] dertyClean,
-			Map<String, String> regex, String[] dictionary, boolean breakOnTypeMismatch) throws IOException {
+			Map<String, String> regex, String[] dictionary, boolean breakOnTypeMismatch, boolean isCombination, String[] spliter) throws IOException {
 		List<JsonNode> matches = new ArrayList<>();
 		for (JsonNode s : list) {
 			//filter on key
 			for (int whereI = 0; whereI < keys.length; whereI++) {
-				if (!isEqual("", item.get(keys[whereI]), s.get(keys[whereI]), breakOnNullNode, breakOnNullValue, allowedDiffPrecision, caseSensitiveValue, dertyClean, regex, dictionary, breakOnTypeMismatch)) {
+				if (!isEqual("", item.get(keys[whereI]), s.get(keys[whereI]), breakOnNullNode, breakOnNullValue, allowedDiffPrecision, caseSensitiveValue, dertyClean, regex, dictionary, breakOnTypeMismatch,
+						isCombination, spliter)) {
 					continue;
 				}
 			}

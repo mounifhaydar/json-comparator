@@ -23,5 +23,5 @@ public class CompareInput {
 	boolean					breakOnTypeMismatch;
 	private Precisions		precisions		= new Precisions();
 	private DirtyCleans		dirtyCleans		= new DirtyCleans();
-
+	private Combinations	combinations	= new Combinations();
 }

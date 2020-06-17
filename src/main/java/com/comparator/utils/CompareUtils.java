@@ -2,13 +2,17 @@ package com.comparator.utils;
 
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
+
+import org.apache.commons.lang3.ArrayUtils;
 
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonParseException;
@@ -37,7 +41,7 @@ public class CompareUtils {
 	//private static double											allowedDiffPrecision		= 0.01;
 
 	public static boolean isEqual(String rootName, JsonNode actual, JsonNode expected, boolean breakOnNullNode, boolean breakOnNullValue, int allowedDiffPrecision, boolean caseSensitive, String[] dertyClean,
-			Map<String, String> regex, String[] dictionary, boolean breakOnTypeMismatch) {
+			Map<String, String> regex, String[] dictionary, boolean breakOnTypeMismatch, boolean isCombination, String[] spliter) {
 		boolean equal = false;
 		BiPredicate<Boolean, Boolean> checkType = (a, e) -> a && e || (!breakOnNullValue) && (a || e);
 
@@ -63,23 +67,36 @@ public class CompareUtils {
 				equal = true;
 			}
 		} else if (checkType.test(actual.isTextual(), expected.isTextual())) {
-			String actualA = Optional.ofNullable(actual.textValue()).orElse("");
-			String actualE = Optional.ofNullable(expected.textValue()).orElse("");
-			String[] a = cleanNode(actualA, caseSensitive, dertyClean, regex, dictionary);
-			String[] e = cleanNode(actualE, caseSensitive, dertyClean, regex, dictionary);
-			equal = Arrays.equals(a, e);
+			equal = isTextualEqual(actual, expected, caseSensitive, dertyClean, regex, dictionary, isCombination, spliter);
+
 		} else {//default equal
-			String[] a = cleanNode(actual.asText(), caseSensitive, dertyClean, regex, dictionary);
-			String[] e = cleanNode(expected.asText(), caseSensitive, dertyClean, regex, dictionary);
-			equal = Arrays.equals(a, e);
+			equal = isTextualEqual(actual, expected, caseSensitive, dertyClean, regex, dictionary, isCombination, spliter);
 		}
 
 		return equal;
 	}
 
-	public static String[] cleanNode(String value/* JsonNode n */, boolean caseSensitive, String[] dertyClean, Map<String, String> regex, String[] dictionary) {
+	private static boolean isTextualEqual(JsonNode actual, JsonNode expected, boolean caseSensitive, String[] dertyClean, Map<String, String> regex, String[] dictionary, boolean isCombination, String[] spliter) {
+		boolean equal;
+		String actualA = Optional.ofNullable(actual.textValue()).orElse("");
+		String actualE = Optional.ofNullable(expected.textValue()).orElse("");
+
+		actualA = cleanNode(actualA, caseSensitive, dertyClean, regex, dictionary);
+		actualE = cleanNode(actualE, caseSensitive, dertyClean, regex, dictionary);
+
+		if (isCombination) {
+			Object[] a = permutate(actualA, spliter);
+			Object[] e = permutate(actualE, spliter);
+			equal = Arrays.equals(a, e);
+		} else {
+			equal = actualA.equals(actualE);
+		}
+		return equal;
+	}
+
+	public static String cleanNode(String value/* JsonNode n */, boolean caseSensitive, String[] dertyClean, Map<String, String> regex, String[] dictionary) {
 		String in = value;//n.asText().trim();
-		String[] out = null;
+		String out = null;
 
 		/*
 		 * if (in.equals("0") || in.equals("0.0")) {//@Now Zero is same as empty
@@ -108,7 +125,30 @@ public class CompareUtils {
 			}
 		}
 
-		out = (caseSensitive ? in : in.toLowerCase()).split(",");//TODO ADD SPLITER[] IN INPUT PARAM, THEN FOR EACH SPLIT AND COLLECT
+		out = caseSensitive ? in : in.toLowerCase();
+
+		return out;
+	}
+
+	public static /*<T> T[]*/Object[] permutate(String in, String[] spliter) {
+		/*T[]*/Object[] out = null;
+
+		if (spliter != null && spliter.length > 0) {
+			List<String> main = new ArrayList<String>();
+			main.add(in);
+
+			for (int i = 0; i < spliter.length; i++) {
+				List<String> sub = new ArrayList<String>();
+				for (int subI = 0; subI < main.size(); subI++) {
+					sub.addAll(Arrays.asList(main.get(subI).split(spliter[i])));
+				}
+				main = sub;
+			}
+			out = /*(T[])*/ main.toArray();
+		} else {
+			out = /*(T[])*/ ArrayUtils.toObject(in.toCharArray());
+		}
+		
 		Arrays.sort(out);
 		return out;
 	}
@@ -134,7 +174,7 @@ public class CompareUtils {
 			} catch (NumberFormatException ex) {
 
 			}
-			
+
 		}
 		return aResult || bResult;
 	}
