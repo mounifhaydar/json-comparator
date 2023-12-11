@@ -2,7 +2,6 @@ package com.comparator.controller;
 
 import java.io.IOException;
 
-import javax.ws.rs.Consumes;
 import javax.ws.rs.core.MediaType;
 
 import org.json.simple.parser.ParseException;

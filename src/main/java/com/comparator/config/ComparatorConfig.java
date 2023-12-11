@@ -19,25 +19,28 @@ public class ComparatorConfig {
 
 	@Bean(name = "mapperIndent")
 	public ObjectMapper serializingObjectMapper() {
+		// JsonMapper.builder().configure
 		ObjectMapper objectMapper = new ObjectMapper();
-		objectMapper.configure(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES, true).configure(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY, true).configure(SerializationFeature.INDENT_OUTPUT, true)
+		objectMapper.configure(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES, true)
+				.configure(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY, true)
+				.configure(SerializationFeature.INDENT_OUTPUT, true)
 		/*
-		 * .configure(JsonParser.Feature.ALLOW_BACKSLASH_ESCAPING_ANY_CHARACTER,
-		 * true) .configure(JsonParser.Feature.ALLOW_SINGLE_QUOTES,
+		 * .configure(JsonParser.Feature.ALLOW_BACKSLASH_ESCAPING_ANY_CHARACTER, true)
+		 * .configure(JsonParser.Feature.ALLOW_SINGLE_QUOTES,
 		 * true).configure(JsonParser.Feature.ALLOW_UNQUOTED_FIELD_NAMES, true)
 		 */;
 		return objectMapper;
 	}
 
 	/*
-	 * @Bean(name = "mapperIndent") public JsonNodeFactory serializingJsonNode()
-	 * { JsonNodeFactory objectMapper = new JsonNodeFactory(true);
+	 * @Bean(name = "mapperIndent") public JsonNodeFactory serializingJsonNode() {
+	 * JsonNodeFactory objectMapper = new JsonNodeFactory(true);
 	 * objectMapper.configure(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES,
 	 * true).configure(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY,
 	 * true).configure(SerializationFeature.INDENT_OUTPUT, true)
-	 * .configure(JsonParser.Feature.ALLOW_BACKSLASH_ESCAPING_ANY_CHARACTER,
-	 * true) .configure(JsonParser.Feature.ALLOW_SINGLE_QUOTES,
-	 * true).configure(JsonParser.Feature.ALLOW_UNQUOTED_FIELD_NAMES, true);
-	 * return objectMapper; }
+	 * .configure(JsonParser.Feature.ALLOW_BACKSLASH_ESCAPING_ANY_CHARACTER, true)
+	 * .configure(JsonParser.Feature.ALLOW_SINGLE_QUOTES,
+	 * true).configure(JsonParser.Feature.ALLOW_UNQUOTED_FIELD_NAMES, true); return
+	 * objectMapper; }
 	 */
 }
