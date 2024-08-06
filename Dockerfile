@@ -29,7 +29,7 @@ RUN ./gradlew build
 # Stage 2: Create the final runtime image
 #FROM openjdk:17-jdk-slim
 FROM azul/zulu-openjdk:17-latest
-VOLUME /tmp
+#VOLUME /tmp
 
 # Set the working directory
 WORKDIR /app
