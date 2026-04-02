@@ -10,6 +10,7 @@ buildscript {
     }
 }
 
+
 plugins {
     id 'java'
     id 'eclipse'
@@ -36,14 +37,30 @@ bootJar {
     launchScript()
 }
 
+ext{
+	springDocVersion = '2.2.0'
+}
+
 repositories {
     mavenCentral() // Use mavenCentral() instead of jcenter()
+    mavenLocal()
+}
+
+eclipse {
+//TO DOwnload the source code
+    classpath {
+        downloadSources = true
+        downloadJavadoc = true
+    }
 }
 
 
-
-
 dependencies {
+
+	implementation group :'com.devkit', name: 'devkit-common', version: '1.7.5-SNAPSHOT'
+	implementation (group :'com.devkit',name: 'devkit-configuration', version: '1.7.5-SNAPSHOT')
+	implementation (group :'com.devkit',name: 'devkit-reporting', version: '1.7.5-SNAPSHOT')
+	
     implementation group: 'org.jooq', name: 'jool', version: '0.9.12'
     // https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-web
 	implementation 'org.springframework.boot:spring-boot-starter-web:3.1.4'
@@ -81,6 +98,17 @@ dependencies {
     testImplementation('junit:junit:4.13.2') {
     exclude group: 'org.hamcrest', module: 'hamcrest-core'
 	}
+	
+	//add spring security - keyclaok
+	implementation 'org.springframework.boot:spring-boot-starter-webflux'
+	//implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.2.0'
+	implementation "org.springdoc:springdoc-openapi-starter-webmvc-ui:${springDocVersion}"
+	implementation 'org.springframework.boot:spring-boot-starter-security'
+	implementation 'org.springframework.security:spring-security-core'
+    implementation 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
+    implementation 'org.springframework.data:spring-data-rest-core'
+    implementation 'org.keycloak:keycloak-core:21.0.1'
+    
 }
 
 
